@@ -1,0 +1,86 @@
+name: TCIA Extract
+on:
+  push:
+    branches: [tcia-extract-temp]
+    paths: ['.github/workflows/tcia_extract.yml']
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download current TCIA clinical metadata
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 4 --retry-delay 2 \
+            'https://github.com/kirbyju/tcia-query-skill/releases/download/tcia-metadata-v2-2026.10.02-f44695b7b84b/clinical_metadata.sqlite.gz' \
+            -o clinical_metadata.sqlite.gz
+          gunzip clinical_metadata.sqlite.gz
+          ls -lh clinical_metadata.sqlite
+
+      - name: Extract Pretreat-MetsToBrain-Masks rows
+        run: |
+          python - <<'PY'
+          import csv, json, os, re, sqlite3
+          from pathlib import Path
+
+          db = 'clinical_metadata.sqlite'
+          out = Path('pretreat_extract')
+          out.mkdir(exist_ok=True)
+          conn = sqlite3.connect(db)
+          conn.row_factory = sqlite3.Row
+          target = 'pretreat-metstobrain-masks'
+          norm = lambda s: re.sub(r'[^a-z0-9]+','',str(s or '').lower())
+          target_norm = norm(target)
+
+          tables = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+          manifest = {}
+          for table in tables:
+              cols = [r[1] for r in conn.execute(f'PRAGMA table_info("{table}")')]
+              likely = [c for c in cols if any(k in c.lower() for k in ('short_title','dataset','collection'))]
+              selected = []
+              used_col = None
+              for c in likely:
+                  try:
+                      rows = conn.execute(f'SELECT * FROM "{table}" WHERE "{c}" IS NOT NULL').fetchall()
+                  except sqlite3.Error:
+                      continue
+                  matches = [dict(r) for r in rows if norm(r[c]) == target_norm]
+                  if matches:
+                      selected = matches
+                      used_col = c
+                      break
+              # For key clinical tables, also try source_url/text fields if direct title column absent.
+              if not selected and table in {'clinical_downloads','clinical_rows','clinical_facts','clinical_subjects'}:
+                  text_cols = [c for c in cols if any(k in c.lower() for k in ('source','url','title'))]
+                  for c in text_cols:
+                      try:
+                          rows = conn.execute(f'SELECT * FROM "{table}" WHERE "{c}" LIKE ?', ('%Pretreat-MetsToBrain-Masks%',)).fetchall()
+                      except sqlite3.Error:
+                          continue
+                      if rows:
+                          selected = [dict(r) for r in rows]
+                          used_col = c
+                          break
+              manifest[table] = {'columns': cols, 'filter_column': used_col, 'rows': len(selected)}
+              if selected:
+                  fp = out / f'{table}.csv'
+                  with fp.open('w', newline='', encoding='utf-8') as f:
+                      w = csv.DictWriter(f, fieldnames=cols)
+                      w.writeheader(); w.writerows(selected)
+          (out/'manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+          # Compact resolved-facts pivot when available.
+          if 'clinical_facts' in tables:
+              cols = [r[1] for r in conn.execute('PRAGMA table_info("clinical_facts")')]
+              print('clinical_facts columns:', cols)
+          print(json.dumps({k:v['rows'] for k,v in manifest.items() if v['rows']}, indent=2))
+          PY
+          du -sh pretreat_extract
+          find pretreat_extract -maxdepth 1 -type f -printf '%f %s bytes\n'
+
+      - name: Upload extracted rows
+        uses: actions/upload-artifact@v4
+        with:
+          name: pretreat-clinical-extract
+          path: pretreat_extract/
+          retention-days: 3
