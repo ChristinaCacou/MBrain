@@ -7,51 +7,19 @@ on:
 jobs:
   extract:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
-      - name: Download current TCIA clinical metadata
+      - name: Download official TCIA clinical workbook
         run: |
           set -euo pipefail
           curl -L --fail --retry 4 --retry-delay 2 \
-            'https://github.com/kirbyju/tcia-query-skill/releases/download/tcia-metadata-v2-2026.10.02-f44695b7b84b/clinical_metadata.sqlite.gz' \
-            -o clinical_metadata.sqlite.gz
-          gunzip clinical_metadata.sqlite.gz
+            'https://www.cancerimagingarchive.net/wp-content/uploads/Pretreat-MetsToBrain-Masks_clin_20240410.xlsx' \
+            -o Pretreat-MetsToBrain-Masks_clin_20240410.xlsx
+          ls -lh Pretreat-MetsToBrain-Masks_clin_20240410.xlsx
 
-      - name: Extract Pretreat-MetsToBrain-Masks rows
-        run: |
-          python - <<'PY'
-          import csv, json, re, sqlite3
-          from pathlib import Path
-          db='clinical_metadata.sqlite'; out=Path('pretreat_extract'); out.mkdir(exist_ok=True)
-          conn=sqlite3.connect(db); conn.row_factory=sqlite3.Row
-          norm=lambda s: re.sub(r'[^a-z0-9]+','',str(s or '').lower())
-          target=norm('Pretreat-MetsToBrain-Masks')
-          tables=[r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
-          manifest={}
-          for table in tables:
-              cols=[r[1] for r in conn.execute(f'PRAGMA table_info("{table}")')]
-              selected=[]; used=None
-              candidate=[c for c in cols if any(k in c.lower() for k in ('short_title','dataset','collection'))]
-              for c in candidate:
-                  try: rows=conn.execute(f'SELECT * FROM "{table}" WHERE "{c}" IS NOT NULL').fetchall()
-                  except sqlite3.Error: continue
-                  m=[dict(r) for r in rows if norm(r[c])==target]
-                  if m: selected=m; used=c; break
-              if not selected and table in {'clinical_downloads','clinical_rows','clinical_facts','clinical_subjects','clinical_dictionary','clinical_sources'}:
-                  for c in [x for x in cols if any(k in x.lower() for k in ('source','url','title'))]:
-                      try: rows=conn.execute(f'SELECT * FROM "{table}" WHERE CAST("{c}" AS TEXT) LIKE ?',('%Pretreat-MetsToBrain-Masks%',)).fetchall()
-                      except sqlite3.Error: continue
-                      if rows: selected=[dict(r) for r in rows]; used=c; break
-              manifest[table]={'columns':cols,'filter_column':used,'rows':len(selected)}
-              if selected:
-                  with (out/f'{table}.csv').open('w',newline='',encoding='utf-8') as f:
-                      w=csv.DictWriter(f,fieldnames=cols); w.writeheader(); w.writerows(selected)
-          (out/'manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
-          print(json.dumps({k:v['rows'] for k,v in manifest.items() if v['rows']},indent=2))
-          PY
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload workbook
+        uses: actions/upload-artifact@v4
         with:
-          name: pretreat-clinical-extract
-          path: pretreat_extract/
+          name: pretreat-clinical-workbook
+          path: Pretreat-MetsToBrain-Masks_clin_20240410.xlsx
           retention-days: 3
