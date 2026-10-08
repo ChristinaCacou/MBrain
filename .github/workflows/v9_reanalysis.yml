@@ -1,0 +1,27 @@
+name: V9 subject-level CCEP reanalysis
+on:
+  push:
+    paths:
+      - '.github/workflows/v9_reanalysis.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install --quiet numpy pandas scipy networkx requests beautifulsoup4 openpyxl
+      - name: Run v9 reanalysis
+        run: python v9_analysis_temp.py
+      - name: Upload v9 results
+        uses: actions/upload-artifact@v4
+        with:
+          name: v9-reanalysis-results
+          path: v9_results/
+          retention-days: 7
