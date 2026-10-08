@@ -1,0 +1,20 @@
+name: temporary CCEP V2 fetch
+on:
+  push:
+    paths:
+      - '.github/workflows/download_v2_temp.yml'
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download public NEMAR derivative
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 'https://data.nemar.org/on004080/v1.0.0/derivatives/av_ccep/ccepData_V2.mat' -o ccepData_V2.mat
+          ls -lh ccepData_V2.mat
+      - name: Upload derivative
+        uses: actions/upload-artifact@v4
+        with:
+          name: ccepData-V2-public
+          path: ccepData_V2.mat
+          retention-days: 1
