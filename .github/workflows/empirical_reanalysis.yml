@@ -1,0 +1,147 @@
+name: Empirical CCEP and glioma reanalysis
+
+on:
+  push:
+    paths:
+      - '.github/workflows/empirical_reanalysis.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis dependencies
+        run: pip install --quiet numpy scipy pandas openpyxl requests beautifulsoup4 h5py
+      - name: Download and inspect empirical datasets
+        shell: bash
+        run: |
+          cat > /tmp/inspect_empirical.py <<'PY'
+          import os, io, json, zipfile, textwrap, traceback
+          from pathlib import Path
+          from urllib.parse import urljoin
+          import requests
+          import numpy as np
+          import pandas as pd
+          from bs4 import BeautifulSoup
+          from scipy.io import loadmat
+
+          out = Path('empirical_inspection')
+          out.mkdir(exist_ok=True)
+          log = []
+          def p(*x):
+              s = ' '.join(map(str,x)); print(s, flush=True); log.append(s)
+
+          # CCEP published derivatives: actual per-subject N1 detections/latencies and averaged responses.
+          base = 'https://data.nemar.org/on004080/v1.0.0/derivatives/av_ccep/'
+          for fn in ['ccepData_V1.mat','ccepAverages.mat']:
+              url = base + fn
+              p('DOWNLOAD', url)
+              r = requests.get(url, timeout=120, allow_redirects=True)
+              p('HTTP', r.status_code, 'bytes', len(r.content), 'final', r.url)
+              r.raise_for_status()
+              (out/fn).write_bytes(r.content)
+
+          for fn in ['ccepData_V1.mat','ccepAverages.mat']:
+              path = out/fn
+              p('\nMAT HEADER', fn, path.read_bytes()[:116])
+              try:
+                  m = loadmat(path, simplify_cells=True)
+                  p('MAT KEYS', fn, [k for k in m if not k.startswith('__')])
+                  for k,v in m.items():
+                      if k.startswith('__'): continue
+                      p(' KEY', k, 'type=', type(v).__name__, 'shape=', getattr(v,'shape',None), 'dtype=', getattr(v,'dtype',None))
+                      if isinstance(v, dict): p('  dict keys', list(v)[:40])
+                      elif isinstance(v, np.ndarray) and v.dtype == object and v.size:
+                          p('  first type', type(v.flat[0]).__name__)
+                          if isinstance(v.flat[0], dict): p('  first keys', list(v.flat[0])[:40])
+              except Exception as e:
+                  p('LOADMAT ERROR', fn, repr(e)); traceback.print_exc()
+
+          # Inspect ccepData specifically.
+          m = loadmat(out/'ccepData_V1.mat', simplify_cells=True)
+          cd = m['ccepData']
+          p('\nCCEPDATA type', type(cd).__name__, 'shape', getattr(cd,'shape',None))
+          # normalize to iterable
+          subs = list(cd) if isinstance(cd, np.ndarray) else ([cd] if isinstance(cd, dict) else list(cd))
+          p('CCEP subject count', len(subs))
+          for i,s in enumerate(subs[:3]):
+              p('SUB', i, 'type', type(s).__name__, 'keys', list(s.keys()) if isinstance(s,dict) else None)
+              if isinstance(s,dict):
+                  p(' id',s.get('id'),'age',s.get('age'),'run type',type(s.get('run')).__name__,'run shape',getattr(s.get('run'),'shape',None))
+                  runs = s.get('run')
+                  if isinstance(runs,dict): runs=[runs]
+                  elif isinstance(runs,np.ndarray): runs=list(runs)
+                  else: runs=list(runs) if runs is not None and not isinstance(runs,list) else runs
+                  if runs:
+                      rr=runs[0]
+                      p(' first run keys', list(rr.keys()) if isinstance(rr,dict) else None)
+                      if isinstance(rr,dict):
+                          for key in ['n1_peak_sample','channel_names','stimpair_names','channel_DestrieuxNr','stimpair_DestrieuxNr','tt']:
+                              vv=rr.get(key); p('  ',key,'type',type(vv).__name__,'shape',getattr(vv,'shape',None),'sample',str(vv)[:300])
+
+          # Glioma source-data zip. Try PMC first, then Nature page if needed.
+          article_urls = [
+            'https://pmc.ncbi.nlm.nih.gov/articles/PMC12780002/',
+            'https://www.nature.com/articles/s41467-025-66988-y'
+          ]
+          source_href = None
+          source_page = None
+          for au in article_urls:
+              try:
+                  h = requests.get(au, timeout=60, headers={'User-Agent':'Mozilla/5.0'}); p('\nARTICLE',au,'HTTP',h.status_code,'bytes',len(h.content))
+                  h.raise_for_status()
+                  soup = BeautifulSoup(h.text,'html.parser')
+                  for a in soup.find_all('a', href=True):
+                      txt=' '.join(a.stripped_strings)
+                      href=a['href']
+                      if 'Source data' in txt or ('source' in txt.lower() and href.lower().endswith('.zip')):
+                          p(' SOURCE-LINK CANDIDATE',repr(txt),href)
+                          if href.lower().endswith('.zip') or 'source' in txt.lower():
+                              source_href=urljoin(au,href); source_page=au
+                  if source_href: break
+              except Exception as e: p('ARTICLE ERROR',au,repr(e))
+          if not source_href:
+              raise RuntimeError('Could not locate source-data hyperlink')
+          p('SOURCE ZIP URL',source_href,'from',source_page)
+          rz=requests.get(source_href,timeout=120,headers={'User-Agent':'Mozilla/5.0'},allow_redirects=True)
+          p('SOURCE ZIP HTTP',rz.status_code,'bytes',len(rz.content),'final',rz.url,'ctype',rz.headers.get('content-type'))
+          rz.raise_for_status()
+          zpath=out/'glioma_source_data.zip'; zpath.write_bytes(rz.content)
+          z=zipfile.ZipFile(io.BytesIO(rz.content))
+          p('ZIP FILES',z.namelist())
+          z.extractall(out/'glioma_source')
+          for fp in sorted((out/'glioma_source').rglob('*')):
+              if fp.is_file():
+                  p('\nSOURCE FILE',fp.as_posix(),'bytes',fp.stat().st_size)
+                  if fp.suffix.lower() in ['.xlsx','.xls']:
+                      xl=pd.ExcelFile(fp)
+                      p(' EXCEL SHEETS',xl.sheet_names)
+                      for sh in xl.sheet_names:
+                          try:
+                              df=pd.read_excel(fp,sheet_name=sh,header=None)
+                              p(' SHEET',sh,'shape',df.shape)
+                              p(df.iloc[:12,:min(12,df.shape[1])].to_csv(index=False,header=False).replace('\n',' | ')[:5000])
+                          except Exception as e: p(' SHEET ERROR',sh,repr(e))
+                  elif fp.suffix.lower() in ['.csv','.tsv','.txt']:
+                      try: p(fp.read_text(errors='replace')[:6000].replace('\n',' | '))
+                      except Exception as e: p(' TEXT ERROR',repr(e))
+
+          (out/'inspection.txt').write_text('\n'.join(log))
+          PY
+          python /tmp/inspect_empirical.py
+      - name: Upload inspection artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: empirical-inspection
+          path: |
+            empirical_inspection/inspection.txt
+            empirical_inspection/glioma_source_data.zip
+          retention-days: 7
