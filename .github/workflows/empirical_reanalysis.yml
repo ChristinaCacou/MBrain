@@ -21,12 +21,14 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install --quiet numpy scipy pandas openpyxl requests beautifulsoup4 networkx matplotlib
+      - name: Correct discrete Hawkes kernel normalization
+        run: sed -i 's|state=state\*decay+arrivals/TAU|state=state*decay+arrivals*((1-decay)/DT)|' empirical_reanalysis_temp.py
       - name: Run empirical CCEP and glioma analysis
         run: python empirical_reanalysis_temp.py
       - name: Upload complete empirical results
         uses: actions/upload-artifact@v4
         with:
-          name: empirical-reanalysis-results
+          name: empirical-reanalysis-results-v2
           path: |
             empirical_results/empirical_results_summary.json
             empirical_results/manuscript_ready_results.txt
