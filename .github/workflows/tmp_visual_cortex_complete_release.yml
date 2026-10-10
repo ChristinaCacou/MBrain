@@ -1,0 +1,114 @@
+name: Temporary complete visual-cortex release analysis
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_visual_cortex_complete_release.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy pandas scikit-learn matplotlib requests
+      - name: Apply frozen metric to all available processed calcium files
+        shell: bash
+        run: |
+          cat > /tmp/complete_release.py <<'PY'
+          import json, requests, warnings
+          from pathlib import Path
+          import numpy as np, pandas as pd
+          from scipy.io import loadmat
+          from scipy.stats import spearmanr
+          from sklearn.preprocessing import StandardScaler
+          from sklearn.linear_model import RidgeClassifier, LinearRegression
+          from sklearn.feature_selection import f_classif
+          from sklearn.metrics import r2_score, mean_absolute_error
+          warnings.filterwarnings('ignore')
+          OUT=Path('complete_visual_cortex_release'); DATA=OUT/'mat'; OUT.mkdir(exist_ok=True); DATA.mkdir(exist_ok=True)
+          groups=[]
+          specs=[('inhibitory','VISp','discovery'),('inhibitory','VISl','validation'),('inhibitory','VISpm','validation'),
+                 ('excitatory','VISp','discovery'),('excitatory','VISal','validation'),('excitatory','VISam','validation'),
+                 ('excitatory','VISl','validation'),('excitatory','VISpm','validation'),('excitatory','VISrl','validation')]
+          for pop,area,role in specs:
+              url=f'https://api.github.com/repos/zivlab/visual_drift/contents/data/calcium_{pop}/{area}'
+              fs=requests.get(url,timeout=30).json(); fs=[f for f in fs if f.get('name','').endswith('.mat')]
+              groups += [(pop,area,role,f) for f in sorted(fs,key=lambda x:x['name'])]
+          print('ALL FILES',len(groups),'discovery',sum(x[2]=='discovery' for x in groups),'validation',sum(x[2]=='validation' for x in groups))
+          def samples(a,s,nb):
+              seg=a[:,:,s]; fpb=900//nb; X=[];y=[];rep=[]
+              for r in range(10):
+                  rr=seg[:,r*900:(r+1)*900]
+                  for b in range(nb): X.append(np.mean(rr[:,b*fpb:(b+1)*fpb],1));y.append(b);rep.append(r)
+              return np.asarray(X),np.asarray(y),np.asarray(rep)
+          def cm(X,y,k): return np.vstack([X[y==i].mean(0) for i in range(k)])
+          def ncorr(a,b):
+              o=np.full(a.shape[1],np.nan)
+              for i in range(a.shape[1]):
+                  if np.std(a[:,i])>1e-9 and np.std(b[:,i])>1e-9:o[i]=np.corrcoef(a[:,i],b[:,i])[0,1]
+              return o
+          splits=[np.arange(8),np.array([0,1,2,3,5,6,7,9]),np.array([0,1,2,4,5,6,8,9])]
+          rows=[];meta=[]
+          for idx,(pop,area,role,f) in enumerate(groups):
+              fp=DATA/(pop+'_'+area+'_'+f['name'])
+              try:
+                  z=requests.get(f['download_url'],timeout=120);z.raise_for_status();fp.write_bytes(z.content)
+                  a=np.asarray(loadmat(fp)['united_traces_days_events'],float)
+                  if a.ndim!=3 or a.shape[1]<9000 or a.shape[2]<3:continue
+                  flat=a.reshape((a.shape[0],-1),order='F')[:,:27000];keep=(np.mean(np.isfinite(flat),1)>.98)&(np.nanvar(flat,1)>1e-10);flat=flat[keep]
+                  if len(flat)<8:continue
+                  a=flat.reshape((len(flat),9000,3),order='F');meta.append({'population':pop,'area':area,'role':role,'recording_id':f['name'][:-4],'n_cells':len(flat),'file_bytes':f['size']})
+                  for nb in [10,30]:
+                      Xs=[];ys=[];rs=[]
+                      for s in range(3):X,y,r=samples(a,s,nb);Xs.append(X);ys.append(y);rs.append(r)
+                      for si,trr in enumerate(splits):
+                          tr=np.isin(rs[0],trr);te=~tr;sc=StandardScaler().fit(Xs[0][tr]);Xtr=sc.transform(Xs[0][tr]);Xte=sc.transform(Xs[0][te])
+                          dec=RidgeClassifier(alpha=10).fit(Xtr,ys[0][tr]);acc0=dec.score(Xte,ys[0][te]);chance=1/nb
+                          F,_=f_classif(Xtr,ys[0][tr]);F=np.maximum(np.nan_to_num(F,nan=0,posinf=0,neginf=0),0);w=F/(F.sum()+1e-12)
+                          X0=sc.transform(Xs[0]);mu0=cm(X0,ys[0],nb)
+                          ma=cm(sc.transform(Xs[0][np.isin(rs[0],[0,1,2,3,4])]),ys[0][np.isin(rs[0],[0,1,2,3,4])],nb)
+                          mb=cm(sc.transform(Xs[0][np.isin(rs[0],[5,6,7,8,9])]),ys[0][np.isin(rs[0],[5,6,7,8,9])],nb)
+                          rel=np.maximum(np.nan_to_num(ncorr(ma,mb),nan=0),0);wr=w*rel;wr/=wr.sum()+1e-12;den=np.mean(mu0**2)+1e-12;denA=np.sum(w*np.mean(mu0**2,0))+1e-12
+                          for s in [1,2]:
+                              Xt=sc.transform(Xs[s]);acc=dec.score(Xt,ys[s]);ret=(acc-chance)/(acc0-chance) if acc0>chance else np.nan;mu=cm(Xt,ys[s],nb);d=mu-mu0;tc=ncorr(mu0,mu);valid=np.isfinite(tc);td=1-tc
+                              rows.append({'population':pop,'area':area,'role':role,'recording_id':f['name'][:-4],'n_cells':len(flat),'n_bins':nb,'session':s+1,'split':si,'baseline_accuracy':acc0,'future_accuracy':acc,'loss':1-ret,
+                               'global_drift':np.sqrt(np.mean(d**2)/den),'anova_amplitude_drift':np.sqrt(np.sum(w*np.mean(d**2,0))/denA),'unweighted_tuning_drift':np.mean(td[valid]),'reliability_task_tuning_drift':np.sum(wr[valid]*td[valid])/(np.sum(wr[valid])+1e-12)})
+              except Exception as e:print('ERR',pop,area,f['name'],repr(e))
+              finally:
+                  try:fp.unlink()
+                  except:pass
+          pd.DataFrame(meta).to_csv(OUT/'file_metadata.csv',index=False)
+          raw=pd.DataFrame(rows).replace([np.inf,-np.inf],np.nan).dropna();raw.to_csv(OUT/'raw_splits.csv',index=False)
+          p=raw.groupby(['population','area','role','recording_id','n_bins','session'],as_index=False).mean(numeric_only=True);p['chance']=1/p.n_bins;p['passes_qc']=p.baseline_accuracy>=(p.chance+.05);p.to_csv(OUT/'pairs_all.csv',index=False);q=p[p.passes_qc].copy();q.to_csv(OUT/'pairs_qc.csv',index=False)
+          print('QC',len(q),'recordings',q.recording_id.nunique(),'disc',sum(q.role=='discovery'),'val',sum(q.role=='validation'))
+          metrics=['global_drift','anova_amplitude_drift','unweighted_tuning_drift','reliability_task_tuning_drift'];stats=[];boots=[];rg=np.random.default_rng(1203)
+          for nb in [10,30]:
+              d=q[(q.role=='discovery')&(q.n_bins==nb)];v=q[(q.role=='validation')&(q.n_bins==nb)].reset_index(drop=True);pred={}
+              for m in metrics:
+                  lm=LinearRegression().fit(d[[m]],d.loss);pv=lm.predict(v[[m]]);rho,pvstat=spearmanr(v[m],v.loss);pred[m]=pv
+                  stats.append({'n_bins':nb,'metric':m,'discovery_n':len(d),'validation_n':len(v),'validation_rho':rho,'validation_p':pvstat,'v1_to_nonv1_r2':r2_score(v.loss,pv),'v1_to_nonv1_mae':mean_absolute_error(v.loss,pv)})
+              ids=v.recording_id.unique();aeG=np.abs(v.loss.values-pred['global_drift'])
+              for m in metrics[1:]:
+                  ae=np.abs(v.loss.values-pred[m]);obs=np.mean(aeG-ae);bb=[]
+                  for _ in range(5000):
+                      sm=rg.choice(ids,len(ids),replace=True);ix=np.concatenate([np.where(v.recording_id.values==z)[0] for z in sm]);bb.append(np.mean(aeG[ix]-ae[ix]))
+                  bb=np.asarray(bb);boots.append({'n_bins':nb,'comparison':m+'_vs_global','mae_advantage':obs,'ci_low':np.quantile(bb,.025),'ci_high':np.quantile(bb,.975),'p_advantage':(1+np.sum(bb<=0))/(len(bb)+1)})
+          st=pd.DataFrame(stats);bd=pd.DataFrame(boots);st.to_csv(OUT/'metric_stats.csv',index=False);bd.to_csv(OUT/'bootstrap.csv',index=False);print(st.to_string(index=False));print(bd.to_string(index=False));
+          area=[]
+          for (nb,a),z in q[q.role=='validation'].groupby(['n_bins','area']):
+              for m in metrics:
+                  r,pv=spearmanr(z[m],z.loss);area.append({'n_bins':nb,'area':a,'n_pairs':len(z),'metric':m,'rho':r,'p':pv})
+          pd.DataFrame(area).to_csv(OUT/'area_stats.csv',index=False)
+          (OUT/'summary.json').write_text(json.dumps({'selected_files':len(groups),'usable_files':len(meta),'qc_recordings':int(q.recording_id.nunique()),'stats':st.to_dict('records'),'bootstrap':bd.to_dict('records')},indent=2))
+          PY
+          python /tmp/complete_release.py
+          rm -rf complete_visual_cortex_release/mat
+      - uses: actions/upload-artifact@v4
+        with:
+          name: complete-visual-cortex-release
+          path: complete_visual_cortex_release/
+          retention-days: 7
