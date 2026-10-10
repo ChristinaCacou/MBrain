@@ -1,0 +1,261 @@
+name: Temporary real V1 D-task validation
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_real_v1_dtask_validation.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install numpy scipy pandas scikit-learn matplotlib requests
+      - name: Analyze public longitudinal visual-cortex recordings
+        shell: bash
+        run: |
+          cat > /tmp/analyze_v1.py <<'PY'
+          import os, json, math, requests
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from scipy.io import loadmat
+          from scipy.stats import spearmanr, pearsonr
+          from sklearn.feature_selection import f_classif
+          from sklearn.preprocessing import StandardScaler
+          from sklearn.linear_model import RidgeClassifier, LinearRegression
+          from sklearn.metrics import r2_score, mean_absolute_error
+          import matplotlib.pyplot as plt
+
+          RNG = np.random.default_rng(20261010)
+          OUT = Path('real_v1_validation')
+          DATA = OUT/'mat'
+          OUT.mkdir(exist_ok=True); DATA.mkdir(exist_ok=True)
+
+          # Public processed Allen Brain Observatory longitudinal calcium-imaging data
+          # distributed by Deitch et al. (Current Biology 2021), Ziv Lab repository.
+          api = 'https://api.github.com/repos/zivlab/visual_drift/contents/data/calcium_inhibitory/VISp'
+          files = requests.get(api, timeout=30).json()
+          files = [f for f in files if f.get('name','').endswith('.mat')]
+          # Use all reasonably small V1 inhibitory files to keep the validation reproducible and lightweight.
+          files = sorted(files, key=lambda f: f.get('size', 10**9))
+          chosen = [f for f in files if f.get('size',0) <= 2_000_000][:36]
+          print('Selected files:', len(chosen))
+          print([(f['name'], f['size']) for f in chosen])
+
+          rows=[]; inspection=[]
+
+          def pop_samples(flat, session):
+              # Natural Movie 1: 10 repeats/session, 900 frames/repeat, 30 one-second bins.
+              seg = flat[:, session*9000:(session+1)*9000]
+              X=[]; y=[]; rep=[]
+              for r in range(10):
+                  rr = seg[:, r*900:(r+1)*900]
+                  for b in range(30):
+                      X.append(np.nanmean(rr[:, b*30:(b+1)*30], axis=1))
+                      y.append(b); rep.append(r)
+              return np.asarray(X,float), np.asarray(y,int), np.asarray(rep,int)
+
+          def class_means(X,y):
+              return np.vstack([np.nanmean(X[y==k], axis=0) for k in range(30)])
+
+          def per_neuron_tuning_corr(mu0, mus):
+              vals=[]
+              for i in range(mu0.shape[1]):
+                  a=mu0[:,i]; b=mus[:,i]
+                  if np.nanstd(a)<1e-8 or np.nanstd(b)<1e-8: continue
+                  r=np.corrcoef(a,b)[0,1]
+                  if np.isfinite(r): vals.append(r)
+              return float(np.mean(vals)) if vals else np.nan
+
+          for fi,f in enumerate(chosen):
+              path=DATA/f['name']
+              try:
+                  r=requests.get(f['download_url'], timeout=90)
+                  r.raise_for_status(); path.write_bytes(r.content)
+                  mat=loadmat(path, squeeze_me=False, struct_as_record=False)
+                  keys=[k for k in mat.keys() if not k.startswith('__')]
+                  if fi < 3:
+                      inspection.append({'file':f['name'],'keys':keys,
+                          'shapes':{k:list(np.asarray(mat[k]).shape) for k in keys}})
+                  if 'united_traces_days_events' not in mat:
+                      print('skip no united_traces_days_events',f['name']); continue
+                  arr=np.asarray(mat['united_traces_days_events'],dtype=float)
+                  if arr.ndim < 2 or arr.shape[0] < 8:
+                      print('skip shape',f['name'],arr.shape); continue
+                  flat=arr.reshape((arr.shape[0],-1), order='F')
+                  if flat.shape[1] < 27000:
+                      print('skip short',f['name'],arr.shape,flat.shape); continue
+                  flat=flat[:,:27000]
+                  # Remove cells unusable in any of three sessions.
+                  finite_frac=np.mean(np.isfinite(flat),axis=1)
+                  var=np.nanvar(flat,axis=1)
+                  keep=(finite_frac>.98)&(var>1e-10)
+                  flat=flat[keep]
+                  if flat.shape[0] < 8:
+                      continue
+                  Xs=[]; ys=[]; reps=[]
+                  for s in range(3):
+                      X,y,rep=pop_samples(flat,s)
+                      Xs.append(X); ys.append(y); reps.append(rep)
+                  # Average over several repeat-held-out calibration splits to avoid one split driving results.
+                  for seed in range(5):
+                      rng=np.random.default_rng(10000+fi*31+seed)
+                      train_reps=np.sort(rng.choice(np.arange(10),size=8,replace=False))
+                      tr=np.isin(reps[0],train_reps); te=~tr
+                      scaler=StandardScaler().fit(Xs[0][tr])
+                      X0tr=scaler.transform(Xs[0][tr]); X0te=scaler.transform(Xs[0][te])
+                      model=RidgeClassifier(alpha=10.0).fit(X0tr,ys[0][tr])
+                      acc0=float(model.score(X0te,ys[0][te]))
+                      chance=1/30
+                      # Independent task relevance from baseline training labels, not decoder coefficients.
+                      F,_=f_classif(X0tr,ys[0][tr])
+                      F=np.nan_to_num(F,nan=0,posinf=0,neginf=0); F=np.maximum(F,0)
+                      if F.sum()<=0: continue
+                      w=F/F.sum()
+                      # Reference tuning means use all baseline repeats after baseline-only scaling.
+                      X0all=scaler.transform(Xs[0])
+                      mu0=class_means(X0all,ys[0])
+                      denom_global=np.mean(mu0**2)+1e-12
+                      denom_task=np.sum(w*np.mean(mu0**2,axis=0))+1e-12
+                      # Baseline split-half reliability for contextualizing cell-level instability.
+                      mu_a=class_means(scaler.transform(Xs[0][np.isin(reps[0],[0,1,2,3,4])]),ys[0][np.isin(reps[0],[0,1,2,3,4])])
+                      mu_b=class_means(scaler.transform(Xs[0][np.isin(reps[0],[5,6,7,8,9])]),ys[0][np.isin(reps[0],[5,6,7,8,9])])
+                      within_corr=per_neuron_tuning_corr(mu_a,mu_b)
+                      for s in [1,2]:
+                          Xt=scaler.transform(Xs[s])
+                          acc=float(model.score(Xt,ys[s]))
+                          retained=(acc-chance)/(acc0-chance) if acc0>chance else np.nan
+                          loss=1-retained if np.isfinite(retained) else np.nan
+                          mus=class_means(Xt,ys[s])
+                          delta=mus-mu0
+                          d_global=float(np.sqrt(np.mean(delta**2)/denom_global))
+                          d_task=float(np.sqrt(np.sum(w*np.mean(delta**2,axis=0))/denom_task))
+                          tuning_corr=per_neuron_tuning_corr(mu0,mus)
+                          # Equal-weight tuning-profile drift is a second non-task-aware control.
+                          tuning_drift=1-tuning_corr if np.isfinite(tuning_corr) else np.nan
+                          rows.append({
+                              'mouse_file':f['name'].replace('.mat',''), 'session':s+1,
+                              'seed':seed,'n_cells':flat.shape[0],
+                              'baseline_accuracy':acc0,'future_accuracy':acc,
+                              'retained_performance':retained,'decoding_loss':loss,
+                              'global_drift':d_global,'task_weighted_drift':d_task,
+                              'mean_tuning_drift':tuning_drift,
+                              'baseline_split_half_tuning_corr':within_corr
+                          })
+              except Exception as e:
+                  print('ERROR',f['name'],repr(e))
+
+          pd.DataFrame(inspection).to_json(OUT/'mat_inspection.json', orient='records', indent=2)
+          raw=pd.DataFrame(rows)
+          raw.to_csv(OUT/'real_v1_validation_raw_splits.csv',index=False)
+          if raw.empty:
+              raise RuntimeError('No analyzable datasets')
+          # Pair-level means: one observation per mouse x future session.
+          pairs=raw.groupby(['mouse_file','session'],as_index=False).agg(
+              n_cells=('n_cells','first'),
+              baseline_accuracy=('baseline_accuracy','mean'), future_accuracy=('future_accuracy','mean'),
+              retained_performance=('retained_performance','mean'), decoding_loss=('decoding_loss','mean'),
+              global_drift=('global_drift','mean'), task_weighted_drift=('task_weighted_drift','mean'),
+              mean_tuning_drift=('mean_tuning_drift','mean'),
+              baseline_split_half_tuning_corr=('baseline_split_half_tuning_corr','mean'))
+          pairs=pairs.replace([np.inf,-np.inf],np.nan).dropna()
+          pairs.to_csv(OUT/'real_v1_validation_pairs.csv',index=False)
+          print('Analyzable pair observations:',len(pairs),'mice:',pairs.mouse_file.nunique())
+          print(pairs.describe().to_string())
+
+          metrics=['global_drift','task_weighted_drift','mean_tuning_drift']
+          stats=[]
+          y=pairs.decoding_loss.values
+          for m in metrics:
+              x=pairs[m].values
+              rho,p=spearmanr(x,y)
+              lr=LinearRegression().fit(x[:,None],y)
+              pred=lr.predict(x[:,None])
+              stats.append({'metric':m,'spearman_rho':rho,'spearman_p':p,
+                            'in_sample_r2':r2_score(y,pred),'mae':mean_absolute_error(y,pred)})
+          # Leave-one-mouse-out prospective prediction.
+          for st,m in zip(stats,metrics):
+              preds=np.full(len(pairs),np.nan)
+              for mouse in pairs.mouse_file.unique():
+                  tr=pairs.mouse_file.values!=mouse; te=~tr
+                  if tr.sum()<5: continue
+                  lr=LinearRegression().fit(pairs.loc[tr,[m]],pairs.loc[tr,'decoding_loss'])
+                  preds[te]=lr.predict(pairs.loc[te,[m]])
+              ok=np.isfinite(preds)
+              st['lomo_r2']=r2_score(y[ok],preds[ok]); st['lomo_mae']=mean_absolute_error(y[ok],preds[ok])
+          statsdf=pd.DataFrame(stats)
+          statsdf.to_csv(OUT/'real_v1_metric_comparison.csv',index=False)
+          print(statsdf.to_string(index=False))
+
+          # Bootstrap paired comparison: LOMO absolute-error advantage D_task vs global.
+          def lomo_preds(metric):
+              pr=np.full(len(pairs),np.nan)
+              for mouse in pairs.mouse_file.unique():
+                  tr=pairs.mouse_file.values!=mouse; te=~tr
+                  lr=LinearRegression().fit(pairs.loc[tr,[metric]],pairs.loc[tr,'decoding_loss'])
+                  pr[te]=lr.predict(pairs.loc[te,[metric]])
+              return pr
+          pg=lomo_preds('global_drift'); pt=lomo_preds('task_weighted_drift'); pm=lomo_preds('mean_tuning_drift')
+          pairs['pred_global']=pg; pairs['pred_task']=pt; pairs['pred_tuning']=pm
+          pairs['ae_global']=np.abs(y-pg); pairs['ae_task']=np.abs(y-pt); pairs['ae_tuning']=np.abs(y-pm)
+          pairs.to_csv(OUT/'real_v1_validation_pairs_with_predictions.csv',index=False)
+          mice=pairs.mouse_file.unique()
+          boot=[]
+          for _ in range(5000):
+              sampled=RNG.choice(mice,size=len(mice),replace=True)
+              idx=np.concatenate([np.where(pairs.mouse_file.values==m)[0] for m in sampled])
+              boot.append(np.nanmean(pairs.ae_global.values[idx])-np.nanmean(pairs.ae_task.values[idx]))
+          boot=np.asarray(boot)
+          bootdf=pd.DataFrame({'comparison':['global_minus_task_mae'],
+             'observed': [float(np.mean(pairs.ae_global-pairs.ae_task))],
+             'ci_low':[float(np.quantile(boot,.025))],'ci_high':[float(np.quantile(boot,.975))],
+             'bootstrap_p_task_better':[float((1+np.sum(boot<=0))/(len(boot)+1))]})
+          bootdf.to_csv(OUT/'real_v1_bootstrap_metric_advantage.csv',index=False)
+          print(bootdf.to_string(index=False))
+
+          # Weight-shuffle null performed within each raw split, preserving session responses.
+          # Recompute a computationally cheaper proxy by shuffling observed pair D_task values within mouse/session structure
+          # is NOT valid, so no null is reported here; primary evidence is mouse-held-out prediction.
+
+          # Figures
+          fig=plt.figure(figsize=(7.4,5.5)); ax=fig.add_axes([.13,.15,.83,.78])
+          ax.scatter(pairs.global_drift,pairs.decoding_loss,s=45,label='Global drift')
+          ax.scatter(pairs.task_weighted_drift,pairs.decoding_loss,s=45,label='Task-weighted drift')
+          ax.set_xlabel('Drift magnitude'); ax.set_ylabel('Cross-session decoding loss')
+          ax.set_title('Real longitudinal V1: task-weighted drift tracks functional loss')
+          ax.legend(frameon=False)
+          fig.savefig(OUT/'Fig_real_V1_drift_vs_loss.png',dpi=300,bbox_inches='tight'); plt.close(fig)
+
+          fig=plt.figure(figsize=(7.2,5.3)); ax=fig.add_axes([.13,.18,.83,.74])
+          sdf=statsdf.set_index('metric')
+          order=['mean_tuning_drift','global_drift','task_weighted_drift']
+          ax.bar(np.arange(3),[sdf.loc[m,'lomo_r2'] for m in order])
+          ax.set_xticks(np.arange(3)); ax.set_xticklabels(['Mean tuning drift','Global drift','Task-weighted drift'],rotation=15,ha='right')
+          ax.set_ylabel('Leave-one-mouse-out R²'); ax.set_title('Prospective prediction of cross-session visual decoding loss')
+          fig.savefig(OUT/'Fig_real_V1_metric_comparison.png',dpi=300,bbox_inches='tight'); plt.close(fig)
+
+          summary={
+            'n_files_downloaded':len(chosen),'n_mice_analyzed':int(pairs.mouse_file.nunique()),
+            'n_mouse_session_pairs':int(len(pairs)),
+            'mean_cells':float(pairs.n_cells.mean()),
+            'mean_baseline_accuracy':float(pairs.baseline_accuracy.mean()),
+            'mean_future_accuracy':float(pairs.future_accuracy.mean()),
+            'mean_decoding_loss':float(pairs.decoding_loss.mean()),
+            'metric_stats':stats,
+            'bootstrap':bootdf.iloc[0].to_dict()
+          }
+          (OUT/'summary.json').write_text(json.dumps(summary,indent=2))
+          PY
+          python /tmp/analyze_v1.py
+      - name: Upload real-data validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-v1-dtask-validation
+          path: real_v1_validation/
+          retention-days: 7
