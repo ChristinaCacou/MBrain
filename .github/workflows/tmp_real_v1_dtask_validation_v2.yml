@@ -1,0 +1,178 @@
+name: Temporary real V1 D-task validation v2
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_real_v1_dtask_validation_v2.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy pandas scikit-learn matplotlib requests
+      - name: Analyze longitudinal V1 across excitatory and inhibitory cohorts
+        shell: bash
+        run: |
+          cat > /tmp/v2.py <<'PY'
+          import json, requests, warnings
+          from pathlib import Path
+          import numpy as np, pandas as pd
+          from scipy.io import loadmat
+          from scipy.stats import spearmanr
+          from sklearn.preprocessing import StandardScaler
+          from sklearn.linear_model import RidgeClassifier, LinearRegression
+          from sklearn.feature_selection import f_classif
+          from sklearn.metrics import r2_score, mean_absolute_error
+          import matplotlib.pyplot as plt
+          warnings.filterwarnings('ignore')
+          OUT=Path('real_v1_validation_v2'); DATA=OUT/'mat'; OUT.mkdir(exist_ok=True); DATA.mkdir(exist_ok=True)
+          rng0=np.random.default_rng(20261010)
+
+          cohorts=[]
+          for pop,path,maxn in [
+              ('inhibitory','data/calcium_inhibitory/VISp',40),
+              ('excitatory','data/calcium_excitatory/VISp',36)]:
+              api=f'https://api.github.com/repos/zivlab/visual_drift/contents/{path}'
+              fs=requests.get(api,timeout=30).json(); fs=[f for f in fs if f.get('name','').endswith('.mat')]
+              fs=sorted(fs,key=lambda f:f.get('size',10**9))[:maxn]
+              cohorts += [(pop,f) for f in fs]
+          print('files selected',len(cohorts), 'inh',sum(p=='inhibitory' for p,_ in cohorts),'exc',sum(p=='excitatory' for p,_ in cohorts))
+
+          def samples(flat,s,n_bins):
+              seg=flat[:,s*9000:(s+1)*9000]
+              frames_per_bin=900//n_bins
+              X=[]; y=[]; rep=[]
+              for r in range(10):
+                  rr=seg[:,r*900:(r+1)*900]
+                  for b in range(n_bins):
+                      X.append(np.nanmean(rr[:,b*frames_per_bin:(b+1)*frames_per_bin],axis=1)); y.append(b); rep.append(r)
+              return np.asarray(X),np.asarray(y),np.asarray(rep)
+          def cmeans(X,y,k): return np.vstack([np.mean(X[y==i],axis=0) for i in range(k)])
+          def mean_corr(a,b):
+              rs=[]
+              for i in range(a.shape[1]):
+                  if np.std(a[:,i])<1e-9 or np.std(b[:,i])<1e-9: continue
+                  q=np.corrcoef(a[:,i],b[:,i])[0,1]
+                  if np.isfinite(q): rs.append(q)
+              return np.mean(rs) if rs else np.nan
+          rows=[]; filemeta=[]
+          for fi,(pop,f) in enumerate(cohorts):
+              try:
+                  fp=DATA/(pop+'_'+f['name']); rr=requests.get(f['download_url'],timeout=120); rr.raise_for_status(); fp.write_bytes(rr.content)
+                  m=loadmat(fp); arr=np.asarray(m['united_traces_days_events'],float)
+                  if arr.shape[0]<8: continue
+                  flat=arr.reshape((arr.shape[0],-1),order='F')[:,:27000]
+                  keep=(np.mean(np.isfinite(flat),axis=1)>.98)&(np.nanvar(flat,axis=1)>1e-10); flat=flat[keep]
+                  if flat.shape[0]<8: continue
+                  filemeta.append({'population':pop,'mouse_file':f['name'][:-4],'n_cells':flat.shape[0],'bytes':f['size']})
+                  for n_bins in [10,30]:
+                      Xs=[]; ys=[]; reps=[]
+                      for s in range(3):
+                          X,y,rep=samples(flat,s,n_bins); Xs.append(X);ys.append(y);reps.append(rep)
+                      for seed in range(5):
+                          rg=np.random.default_rng(50000+fi*101+n_bins*7+seed)
+                          tr_reps=np.sort(rg.choice(10,8,replace=False)); tr=np.isin(reps[0],tr_reps); te=~tr
+                          scaler=StandardScaler().fit(Xs[0][tr]); Xtr=scaler.transform(Xs[0][tr]); Xte=scaler.transform(Xs[0][te])
+                          model=RidgeClassifier(alpha=10).fit(Xtr,ys[0][tr]); acc0=model.score(Xte,ys[0][te]); chance=1/n_bins
+                          # independent relevance via ANOVA F on baseline training only
+                          F,_=f_classif(Xtr,ys[0][tr]); F=np.maximum(np.nan_to_num(F,nan=0,posinf=0,neginf=0),0)
+                          if F.sum()==0: continue
+                          w_anova=F/F.sum()
+                          # decoder-derived relevance included as secondary comparator
+                          W=np.atleast_2d(model.coef_); w_dec=np.linalg.norm(W,axis=0); w_dec=w_dec/(w_dec.sum()+1e-12)
+                          X0=scaler.transform(Xs[0]); mu0=cmeans(X0,ys[0],n_bins)
+                          den_g=np.mean(mu0**2)+1e-12
+                          den_a=np.sum(w_anova*np.mean(mu0**2,axis=0))+1e-12
+                          den_d=np.sum(w_dec*np.mean(mu0**2,axis=0))+1e-12
+                          # readout subspace Q from decoder weights
+                          _,_,vt=np.linalg.svd(W,full_matrices=False); Q=vt.T
+                          z0=mu0@Q; den_s=np.mean(z0**2)+1e-12
+                          for s in [1,2]:
+                              Xt=scaler.transform(Xs[s]); acc=model.score(Xt,ys[s]); retained=(acc-chance)/(acc0-chance) if acc0>chance else np.nan
+                              mu=cmeans(Xt,ys[s],n_bins); d=mu-mu0
+                              dg=np.sqrt(np.mean(d**2)/den_g)
+                              da=np.sqrt(np.sum(w_anova*np.mean(d**2,axis=0))/den_a)
+                              dd=np.sqrt(np.sum(w_dec*np.mean(d**2,axis=0))/den_d)
+                              ds=np.sqrt(np.mean((d@Q)**2)/den_s)
+                              td=1-mean_corr(mu0,mu)
+                              rows.append({'population':pop,'mouse_file':f['name'][:-4],'session':s+1,'n_bins':n_bins,'seed':seed,'n_cells':flat.shape[0],
+                                'baseline_accuracy':acc0,'future_accuracy':acc,'retained':retained,'loss':1-retained,
+                                'global_drift':dg,'anova_task_drift':da,'decoder_task_drift':dd,'task_subspace_drift':ds,'mean_tuning_drift':td})
+              except Exception as e: print('ERR',pop,f['name'],repr(e))
+          pd.DataFrame(filemeta).to_csv(OUT/'file_metadata.csv',index=False)
+          raw=pd.DataFrame(rows).replace([np.inf,-np.inf],np.nan).dropna(); raw.to_csv(OUT/'raw_splits.csv',index=False)
+          pairs=raw.groupby(['population','mouse_file','session','n_bins'],as_index=False).mean(numeric_only=True)
+          # exclude mouse/session pairs whose baseline held-out decoding was not meaningfully above chance (conservative preregistered-like QC)
+          pairs['chance']=1/pairs.n_bins
+          pairs['passes_qc']=pairs.baseline_accuracy >= (pairs.chance + 0.05)
+          pairs.to_csv(OUT/'pairs_all.csv',index=False)
+          q=pairs[pairs.passes_qc].copy(); q.to_csv(OUT/'pairs_qc.csv',index=False)
+          print('pairs all',len(pairs),'QC',len(q),'mice QC',q.mouse_file.nunique())
+          print(q.groupby(['population','n_bins'])[['n_cells','baseline_accuracy','future_accuracy','loss']].agg(['count','mean','std']).to_string())
+
+          metrics=['global_drift','anova_task_drift','decoder_task_drift','task_subspace_drift','mean_tuning_drift']
+          stats=[]
+          for subset,df in [('all_qc',q),('10bin',q[q.n_bins==10]),('30bin',q[q.n_bins==30]),('exc_qc',q[q.population=='excitatory']),('inh_qc',q[q.population=='inhibitory'])]:
+              if len(df)<12: continue
+              for m in metrics:
+                  rho,p=spearmanr(df[m],df.loss)
+                  lr=LinearRegression().fit(df[[m]],df.loss); pred=lr.predict(df[[m]])
+                  # leave-one-mouse-out
+                  pp=np.full(len(df),np.nan); mice=df.mouse_file.unique(); vals=df.reset_index(drop=True)
+                  for mouse in mice:
+                      tr=vals.mouse_file!=mouse; te=~tr
+                      if tr.sum()<8: continue
+                      lm=LinearRegression().fit(vals.loc[tr,[m]],vals.loc[tr,'loss']); pp[te]=lm.predict(vals.loc[te,[m]])
+                  ok=np.isfinite(pp)
+                  stats.append({'subset':subset,'n_pairs':len(df),'n_mice':df.mouse_file.nunique(),'metric':m,'rho':rho,'p':p,
+                                'r2':r2_score(df.loss,pred),'lomo_r2':r2_score(vals.loc[ok,'loss'],pp[ok]),'lomo_mae':mean_absolute_error(vals.loc[ok,'loss'],pp[ok])})
+          st=pd.DataFrame(stats); st.to_csv(OUT/'metric_stats.csv',index=False); print(st.to_string(index=False))
+
+          # Bootstrap mouse-level paired LOMO MAE, ANOVA task drift vs global, using 10-bin subset (stronger decoder SNR) and all QC.
+          boots=[]
+          for subset,df in [('all_qc',q),('10bin',q[q.n_bins==10]),('exc_qc',q[q.population=='excitatory'])]:
+              if len(df)<12: continue
+              vals=df.reset_index(drop=True)
+              pred={}
+              for m in ['global_drift','anova_task_drift','decoder_task_drift','task_subspace_drift']:
+                  pp=np.full(len(vals),np.nan)
+                  for mouse in vals.mouse_file.unique():
+                      tr=vals.mouse_file!=mouse; te=~tr; lm=LinearRegression().fit(vals.loc[tr,[m]],vals.loc[tr,'loss']); pp[te]=lm.predict(vals.loc[te,[m]])
+                  pred[m]=pp
+              mice=vals.mouse_file.unique(); rg=np.random.default_rng(707)
+              for comp in ['anova_task_drift','decoder_task_drift','task_subspace_drift']:
+                  obs=np.mean(np.abs(vals.loss-pred['global_drift']))-np.mean(np.abs(vals.loss-pred[comp]))
+                  bb=[]
+                  for _ in range(5000):
+                      sm=rg.choice(mice,len(mice),replace=True); idx=np.concatenate([np.where(vals.mouse_file.values==mm)[0] for mm in sm])
+                      bb.append(np.mean(np.abs(vals.loss.values[idx]-pred['global_drift'][idx]))-np.mean(np.abs(vals.loss.values[idx]-pred[comp][idx])))
+                  bb=np.asarray(bb)
+                  boots.append({'subset':subset,'comparison':comp+'_vs_global','mae_advantage':obs,'ci_low':np.quantile(bb,.025),'ci_high':np.quantile(bb,.975),'p_advantage':(1+np.sum(bb<=0))/(len(bb)+1)})
+          bd=pd.DataFrame(boots); bd.to_csv(OUT/'bootstrap_comparisons.csv',index=False); print(bd.to_string(index=False))
+
+          # Figure: strongest honest real-data comparison, all QC and 10-bin.
+          for subset,df in [('all_qc',q),('10bin',q[q.n_bins==10])]:
+              ss=st[st.subset==subset].set_index('metric')
+              if ss.empty: continue
+              fig=plt.figure(figsize=(8,5.5)); ax=fig.add_axes([.12,.2,.85,.72])
+              order=['mean_tuning_drift','global_drift','anova_task_drift','decoder_task_drift','task_subspace_drift']
+              labs=['Mean tuning','Global','Task-weighted\n(ANOVA)','Task-weighted\n(decoder)','Task subspace']
+              ax.bar(np.arange(len(order)),[ss.loc[m,'lomo_r2'] for m in order]); ax.axhline(0,lw=1)
+              ax.set_xticks(np.arange(len(order)));ax.set_xticklabels(labs,rotation=15,ha='right');ax.set_ylabel('Leave-one-mouse-out R²')
+              ax.set_title('Real longitudinal V1: prediction of cross-session decoding loss')
+              fig.savefig(OUT/f'Fig_metric_comparison_{subset}.png',dpi=300,bbox_inches='tight');plt.close(fig)
+          q.to_csv(OUT/'analysis_ready_real_V1.csv',index=False)
+          summary={'n_files':len(filemeta),'n_pairs_qc':len(q),'n_mice_qc':q.mouse_file.nunique(),'metrics':st.to_dict('records'),'bootstrap':bd.to_dict('records')}
+          (OUT/'summary.json').write_text(json.dumps(summary,indent=2))
+          PY
+          python /tmp/v2.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: real-v1-dtask-validation-v2
+          path: real_v1_validation_v2/
+          retention-days: 7
