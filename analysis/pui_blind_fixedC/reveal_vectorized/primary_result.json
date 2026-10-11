@@ -1,0 +1,39 @@
+{
+  "blind_lock_script_sha256": "def269ec1743df0f5cbc78f1f6b9847ac6f94c6dd157a132dad7354f5358816f",
+  "delta_rho_permutation_p_one_sided": 0.3795552408895182,
+  "delta_rho_pui_minus_marginal": 0.04895104895104896,
+  "feature_sha256_verified": "93813e3e0232d0dd7aac93d7322fe0aef94f7ce0e33ca32ff87f188020c6d236",
+  "leave_one_region_out_rho_max": 0.6545454545454545,
+  "leave_one_region_out_rho_median": 0.35454545454545455,
+  "leave_one_region_out_rho_min": 0.2818181818181818,
+  "marginal_rho": 0.3356643356643357,
+  "n_regions": 12,
+  "outcome_source_commit": "a17677ef2ab38c198761ad66f8a8548e4b857901",
+  "outcome_source_sha256": "e41c1a79cb7853e9840f9db1ed280946bd8c8c7cc401531bc9de0f12b8ba93db",
+  "partial_rank_p": 0.27556745095678037,
+  "partial_rank_rho_controlling_neuron_yield_and_snr": 0.3426573426573427,
+  "primary_bootstrap_95_ci": [
+    -0.2785714285714286,
+    0.8078291814946619
+  ],
+  "primary_metric": "pui_mean",
+  "primary_permutation_p_one_sided_positive": 0.1090517818964362,
+  "primary_permutation_p_two_sided": 0.218753562492875,
+  "primary_spearman_rho": 0.38461538461538464,
+  "regions": [
+    "ACA",
+    "MOp",
+    "MOs",
+    "ORB",
+    "PL",
+    "RSP",
+    "SSp",
+    "SSs",
+    "VISam",
+    "VISl",
+    "VISp",
+    "VISpm"
+  ],
+  "success": false,
+  "success_criterion": "positive primary association with one-sided permutation p<0.05 AND PUI rho > marginal rho"
+}
