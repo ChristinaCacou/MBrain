@@ -1,0 +1,88 @@
+{
+  "seed": 20261011,
+  "n_splits": 3000,
+  "analysis_type": "post-reveal diagnostic using frozen outcome-blind features only",
+  "outcome_values_loaded": false,
+  "results": [
+    {
+      "split_unit": "session",
+      "metric": "pui_nats_per_trial",
+      "label": "conditional predictive gain (locked PUI variable)",
+      "eligible_regions": 28,
+      "n_valid_splits": 3000,
+      "median_spearman_rho": 0.14942528735632185,
+      "ci_low": -0.11713191023535852,
+      "ci_high": 0.42092227695675977
+    },
+    {
+      "split_unit": "session",
+      "metric": "marginal_gain_nats_per_trial",
+      "label": "marginal predictive gain",
+      "eligible_regions": 28,
+      "n_valid_splits": 3000,
+      "median_spearman_rho": -0.10372194854953476,
+      "ci_low": -0.3607553366174056,
+      "ci_high": 0.15818281335522716
+    },
+    {
+      "split_unit": "session",
+      "metric": "target_only_auc",
+      "label": "local decoder AUC",
+      "eligible_regions": 28,
+      "n_valid_splits": 3000,
+      "median_spearman_rho": 0.2731253420908593,
+      "ci_low": 0.06457307060755337,
+      "ci_high": 0.5314860426929393
+    },
+    {
+      "split_unit": "session",
+      "metric": "target_only_bacc",
+      "label": "local decoder balanced accuracy",
+      "eligible_regions": 28,
+      "n_valid_splits": 3000,
+      "median_spearman_rho": 0.20415982484948003,
+      "ci_low": 0.004898741105637667,
+      "ci_high": 0.4034209085933225
+    },
+    {
+      "split_unit": "mouse",
+      "metric": "pui_nats_per_trial",
+      "label": "conditional predictive gain (locked PUI variable)",
+      "eligible_regions": 21,
+      "n_valid_splits": 3000,
+      "median_spearman_rho": 0.0987012987012987,
+      "ci_low": -0.24288961038961038,
+      "ci_high": 0.4649350649350649
+    },
+    {
+      "split_unit": "mouse",
+      "metric": "marginal_gain_nats_per_trial",
+      "label": "marginal predictive gain",
+      "eligible_regions": 21,
+      "n_valid_splits": 3000,
+      "median_spearman_rho": 0.09350649350649351,
+      "ci_low": -0.24285714285714285,
+      "ci_high": 0.4714285714285714
+    },
+    {
+      "split_unit": "mouse",
+      "metric": "target_only_auc",
+      "label": "local decoder AUC",
+      "eligible_regions": 21,
+      "n_valid_splits": 3000,
+      "median_spearman_rho": 0.13376623376623376,
+      "ci_low": -0.08831168831168831,
+      "ci_high": 0.3948051948051948
+    },
+    {
+      "split_unit": "mouse",
+      "metric": "target_only_bacc",
+      "label": "local decoder balanced accuracy",
+      "eligible_regions": 21,
+      "n_valid_splits": 3000,
+      "median_spearman_rho": 0.08311688311688312,
+      "ci_low": -0.14678571428571427,
+      "ci_high": 0.34805194805194806
+    }
+  ]
+}
