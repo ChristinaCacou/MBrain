@@ -1,0 +1,5 @@
+min_sessions,n_regions,regions,spearman_rho,one_sided_permutation_p,method
+1,12,"ACA,MOp,MOs,ORB,PL,RSP,SSp,SSs,VISam,VISl,VISp,VISpm",0.38461538461538464,,descriptive only (>8 regions)
+3,10,"ACA,MOs,ORB,PL,RSP,SSp,VISam,VISl,VISp,VISpm",0.3333333333333333,,descriptive only (>8 regions)
+5,7,"ACA,MOs,ORB,PL,RSP,VISam,VISp",0.35714285714285715,0.2222222222222222,exact all label permutations
+7,6,"ACA,MOs,PL,RSP,VISam,VISp",0.02857142857142857,0.5,exact all label permutations

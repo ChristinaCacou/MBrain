@@ -1,0 +1,37 @@
+{
+  "analysis_type": "post-reveal diagnostic; primary analysis unchanged",
+  "rows": [
+    {
+      "min_sessions": 1,
+      "n_regions": 12,
+      "regions": "ACA,MOp,MOs,ORB,PL,RSP,SSp,SSs,VISam,VISl,VISp,VISpm",
+      "spearman_rho": 0.38461538461538464,
+      "one_sided_permutation_p": NaN,
+      "method": "descriptive only (>8 regions)"
+    },
+    {
+      "min_sessions": 3,
+      "n_regions": 10,
+      "regions": "ACA,MOs,ORB,PL,RSP,SSp,VISam,VISl,VISp,VISpm",
+      "spearman_rho": 0.3333333333333333,
+      "one_sided_permutation_p": NaN,
+      "method": "descriptive only (>8 regions)"
+    },
+    {
+      "min_sessions": 5,
+      "n_regions": 7,
+      "regions": "ACA,MOs,ORB,PL,RSP,VISam,VISp",
+      "spearman_rho": 0.35714285714285715,
+      "one_sided_permutation_p": 0.2222222222222222,
+      "method": "exact all label permutations"
+    },
+    {
+      "min_sessions": 7,
+      "n_regions": 6,
+      "regions": "ACA,MOs,PL,RSP,VISam,VISp",
+      "spearman_rho": 0.02857142857142857,
+      "one_sided_permutation_p": 0.5,
+      "method": "exact all label permutations"
+    }
+  ]
+}
