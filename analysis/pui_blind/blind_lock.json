@@ -1,0 +1,45 @@
+{
+  "C_grid": [
+    0.03,
+    0.1,
+    0.3,
+    1.0,
+    3.0
+  ],
+  "draws": 3,
+  "feature_sha256": {
+    "blind_features_draws.csv": "f9da926ea18c9d09a2cac5db5fd5c50da530c26ec4637fa765951ad7fdc68f18",
+    "blind_features_region.csv": "b36dff8b97057fc2184a195978e26c70ac813f536c38a65eac47b18765e91d83",
+    "blind_features_session.csv": "1f30f93c1968337b910b667f15898f4bfbcdddf80decea1daf157b20a65d1ff9"
+  },
+  "fixed_neurons_per_region": 5,
+  "history_covariates": [
+    "contrast_left",
+    "contrast_right",
+    "signed_evidence",
+    "total_contrast",
+    "prev_response",
+    "prev_feedback",
+    "prev_contrast_left",
+    "prev_contrast_right"
+  ],
+  "inner_folds": 3,
+  "other_region_pcs": 1,
+  "outcome_blind": true,
+  "outer_folds": 4,
+  "perturbation_labels_loaded": false,
+  "primary_metric": "pui_mean",
+  "raw_sha256": {
+    "steinmetz_part0.npz": "dd888b66b18cf23f01d22f2715d68adc99019276bba5d4a85605c9c4509b7779",
+    "steinmetz_part1.npz": "2bb8c0ef44beec8d50f6dab068c3b1fb54f4f7f814c54926c04f77d411a96a8f",
+    "steinmetz_part2.npz": "2da149af3bc70d223c03c3ca4b25d4425472a3031bc42e98bbccbdc8b0c4d1bd"
+  },
+  "script_sha256": "76c37b72244f700a90e95792480f67c6a76fd92628ea3e2ec4708e60218ea06b",
+  "seed": 20261011,
+  "target": "responded-trial choice direction",
+  "target_pcs": 2,
+  "window_s": [
+    0.0,
+    0.2
+  ]
+}
