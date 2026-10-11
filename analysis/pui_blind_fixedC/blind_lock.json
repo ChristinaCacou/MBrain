@@ -1,0 +1,39 @@
+{
+  "draws": 3,
+  "feature_sha256": {
+    "blind_features_draws.csv": "72a51a022d7b136c1843a2b70d33035be66115270905ebe0785f18f6f49db36c",
+    "blind_features_region.csv": "93813e3e0232d0dd7aac93d7322fe0aef94f7ce0e33ca32ff87f188020c6d236",
+    "blind_features_session.csv": "3e7908b13f9ae5e7731d68010b3a596b80f057b8e79c7c32f8ec30d471c0d5cb"
+  },
+  "fixed_neurons_per_region": 5,
+  "history_covariates": [
+    "contrast_left",
+    "contrast_right",
+    "signed_evidence",
+    "total_contrast",
+    "prev_response",
+    "prev_feedback",
+    "prev_contrast_left",
+    "prev_contrast_right"
+  ],
+  "logistic_C_fixed": 1.0,
+  "other_region_pcs": 1,
+  "outcome_blind": true,
+  "outer_folds": 4,
+  "perturbation_labels_loaded": false,
+  "primary_metric": "pui_mean",
+  "raw_sha256": {
+    "steinmetz_part0.npz": "dd888b66b18cf23f01d22f2715d68adc99019276bba5d4a85605c9c4509b7779",
+    "steinmetz_part1.npz": "2bb8c0ef44beec8d50f6dab068c3b1fb54f4f7f814c54926c04f77d411a96a8f",
+    "steinmetz_part2.npz": "2da149af3bc70d223c03c3ca4b25d4425472a3031bc42e98bbccbdc8b0c4d1bd"
+  },
+  "response_before_window_excluded": true,
+  "script_sha256": "def269ec1743df0f5cbc78f1f6b9847ac6f94c6dd157a132dad7354f5358816f",
+  "seed": 20261011,
+  "target": "responded-trial choice direction",
+  "target_pcs": 2,
+  "window_s": [
+    0.0,
+    0.2
+  ]
+}
