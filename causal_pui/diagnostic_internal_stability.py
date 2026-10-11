@@ -2,10 +2,10 @@ import json
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
+from scipy.stats import rankdata
 
 SEED = 20261011
-N_SPLITS = 20000
+N_SPLITS = 3000
 ROOT = Path('analysis/pui_blind_fixedC')
 INFILE = ROOT / 'blind_features_session.csv'
 OUTDIR = ROOT / 'diagnostics'
@@ -19,46 +19,46 @@ METRICS = {
 }
 
 
+def fast_spearman(x, y):
+    rx = rankdata(np.asarray(x, float))
+    ry = rankdata(np.asarray(y, float))
+    rx -= rx.mean(); ry -= ry.mean()
+    den = np.sqrt((rx @ rx) * (ry @ ry))
+    return float((rx @ ry) / den) if den > 0 else np.nan
+
+
 def split_half(df, unit_col, min_units=4):
     rng = np.random.default_rng(SEED + (0 if unit_col == 'session' else 1000))
     base = df.groupby(['region', unit_col], as_index=False).agg(
         **{m: (m, 'mean') for m in METRICS}
     )
-    counts = base.groupby('region')[unit_col].nunique()
-    eligible = sorted(counts[counts >= min_units].index)
-    base = base[base.region.isin(eligible)].copy()
-    values = {m: [] for m in METRICS}
-    n_used = []
-    for _ in range(N_SPLITS):
-        left = {}
-        right = {}
-        for region, g in base.groupby('region'):
-            order = rng.permutation(len(g))
-            h = len(g) // 2
-            if h < 1:
-                continue
-            a = g.iloc[order[:h]]
-            b = g.iloc[order[h:2*h]]
-            left[region] = a
-            right[region] = b
-        common = sorted(set(left) & set(right))
-        n_used.append(len(common))
+    groups = {}
+    for region, g in base.groupby('region'):
+        if g[unit_col].nunique() >= min_units:
+            groups[region] = {m: g[m].to_numpy(float) for m in METRICS}
+    regions = sorted(groups)
+    vals = {m: np.empty(N_SPLITS, float) for m in METRICS}
+    for s in range(N_SPLITS):
+        left = {m: [] for m in METRICS}; right = {m: [] for m in METRICS}
+        for r in regions:
+            n = len(groups[r][next(iter(METRICS))])
+            order = rng.permutation(n)
+            h = n // 2
+            a = order[:h]; b = order[h:2*h]
+            for m in METRICS:
+                left[m].append(np.nanmean(groups[r][m][a]))
+                right[m].append(np.nanmean(groups[r][m][b]))
         for m in METRICS:
-            x = np.array([left[r][m].mean() for r in common], float)
-            y = np.array([right[r][m].mean() for r in common], float)
-            ok = np.isfinite(x) & np.isfinite(y)
-            rho = spearmanr(x[ok], y[ok]).statistic if ok.sum() >= 4 else np.nan
-            values[m].append(rho)
-    rows = []
-    for m, arr in values.items():
-        arr = np.asarray(arr, float)
+            x = np.asarray(left[m]); y = np.asarray(right[m]); ok = np.isfinite(x) & np.isfinite(y)
+            vals[m][s] = fast_spearman(x[ok], y[ok]) if ok.sum() >= 4 else np.nan
+    rows=[]
+    for m, arr in vals.items():
         arr = arr[np.isfinite(arr)]
         rows.append({
             'split_unit': unit_col,
             'metric': m,
             'label': METRICS[m],
-            'eligible_regions': len(eligible),
-            'median_regions_per_split': float(np.median(n_used)),
+            'eligible_regions': len(regions),
             'n_valid_splits': int(len(arr)),
             'median_spearman_rho': float(np.median(arr)),
             'ci_low': float(np.percentile(arr, 2.5)),
