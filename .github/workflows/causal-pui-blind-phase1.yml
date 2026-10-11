@@ -1,0 +1,42 @@
+name: causal-pui-blind-phase1
+
+on:
+  push:
+    branches:
+      - causal-pui-blinded-20261011
+    paths:
+      - 'causal_pui/phase1_blind_features.py'
+      - '.github/workflows/causal-pui-blind-phase1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  blind-features:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: causal-pui-blinded-20261011
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis environment
+        run: python -m pip install --upgrade pip && pip install numpy==2.1.2 pandas==2.2.3 scipy==1.14.1 scikit-learn==1.5.2
+      - name: Run outcome-blind feature computation
+        run: python causal_pui/phase1_blind_features.py
+      - name: Commit immutable blinded outputs
+        run: |
+          git config user.name 'causal-pui-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add analysis/pui_blind/
+          git commit -m 'Lock outcome-blind PUI features' || exit 0
+          git push origin HEAD:causal-pui-blinded-20261011
+      - name: Upload blinded lock artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: causal-pui-blind-lock
+          path: analysis/pui_blind/
+          retention-days: 30
