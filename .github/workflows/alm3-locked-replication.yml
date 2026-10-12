@@ -1,0 +1,27 @@
+name: alm3 frozen external replication
+on:
+  push:
+    branches: [alm3-frozen-replication-20261011]
+    paths:
+      - '.github/workflows/alm3-locked-replication.yml'
+  workflow_dispatch:
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy h5py requests
+      - run: python alm3_replication/run_locked_replication.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-locked-replication
+          path: |
+            analysis/alm3_locked/session_results.json
+            analysis/alm3_locked/mouse_results.json
+            analysis/alm3_locked/result.json
+            alm3_replication/analysis_lock.json
+          retention-days: 90
