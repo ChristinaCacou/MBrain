@@ -1,0 +1,19 @@
+name: Guo 2017 outcome-blind schema inventory
+on:
+  push:
+    branches: [transport-theorem-guo-20261012]
+    paths:
+      - 'external_replication/guo2017_schema_inventory.py'
+      - '.github/workflows/guo2017-schema-inventory.yml'
+  workflow_dispatch:
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet requests h5py remfile
+      - run: python external_replication/guo2017_schema_inventory.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guo2017-schema-inventory
+          path: analysis/guo2017_schema_inventory/
