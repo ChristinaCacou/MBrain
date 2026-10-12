@@ -1,0 +1,24 @@
+{
+  "status": "POST_HOC_ZERO_RECALIBRATION_TRANSPORT_AUDIT",
+  "source": "Chen et al. 2021 raw mouse table",
+  "target": "Chen et al. 2024 DANDI frozen-analysis mouse table",
+  "n_source_mice": 18,
+  "n_target_mice": 8,
+  "source_fit": {"slope": 0.20404770165908506, "intercept": 0.8360477117797835},
+  "target_fixed_prediction": {
+    "spearman_rho": 0.6666666666666669,
+    "exact_one_sided_permutation_p": 0.04154265873015873,
+    "external_r2_vs_target_mean": 0.4792956336248916,
+    "mae": 0.02235644990269342,
+    "rmse": 0.026127490106826596,
+    "source_mean_baseline_mae": 0.045769541602515035,
+    "mae_fractional_improvement_vs_source_mean": 0.5115430672903017,
+    "calibration_slope": 1.2309305381453866,
+    "calibration_intercept": -0.21877780655550905,
+    "bootstrap95_r2": [-2.4388223592702754, 0.7459421737697925],
+    "bootstrap95_mae": [0.013147771650122458, 0.03171467369464054],
+    "bootstrap95_calibration_slope": [0.3150515199722057, 2.420335168434454],
+    "bootstrap95_calibration_intercept": [-1.382772031410656, 0.6976069798456807]
+  },
+  "interpretation": "The raw-scale 2021 relation was transferred without refitting. Because this audit was specified after 2024 outcomes were known, it strengthens calibration/transport plausibility but cannot be treated as prospective confirmation."
+}
