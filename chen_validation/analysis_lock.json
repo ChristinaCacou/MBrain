@@ -1,0 +1,25 @@
+{
+  "dataset": "Chen et al., Cell 2021, DOI 10.1016/j.cell.2021.05.026; Zenodo 6713616",
+  "status": "analysis specification frozen before extracting numerical values from the source archive; not outcome-blind to the publication's qualitative conclusions",
+  "population": "simultaneous bilateral ALM recording sessions with unilateral photoinhibition",
+  "primary_question": "Do control-trial interhemispheric interaction features predict perturbation recovery and behavioral robustness within the same recording-and-perturbation sessions?",
+  "predictors_control_trials_only": [
+    "published control-trial inferred interhemispheric influence in the weakly selective state",
+    "published control-trial inferred interhemispheric influence in the highly selective state",
+    "state-dependence contrast = weak-state influence minus high-state influence"
+  ],
+  "outcomes": [
+    "recovery of choice information after contralateral photoinhibition",
+    "behavioral performance on unilateral photoinhibition trials"
+  ],
+  "primary_statistic": "mouse-blocked leave-one-mouse-out prediction of perturbation outcome from the state-dependence contrast, compared with simpler control-only baselines when source processed quantities permit",
+  "secondary_statistics": [
+    "session-level Spearman rank association",
+    "mouse-mean Spearman rank association",
+    "leave-one-mouse-out R2 and rank correlation",
+    "bootstrap confidence intervals clustered by mouse"
+  ],
+  "inferential_unit": "mouse for primary generalization/inference; sessions are repeated observations within mouse",
+  "success_criterion": "positive leave-one-mouse-out association and positive out-of-sample R2 for at least one perturbation outcome, with concordant clustered association",
+  "scope_note": "If the public scripts/archive expose only author-derived summary arrays rather than raw trial-level values, the analysis will be reported explicitly as an independent numerical reanalysis of source-derived processed quantities, not a de novo raw-data replication."
+}
