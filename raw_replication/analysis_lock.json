@@ -3,31 +3,40 @@
   "status": "FROZEN_BEFORE_ALM3_NUMERICAL_OUTCOME_EXTRACTION",
   "scope": "Raw spike/trial-level Chen reanalysis plus a frozen numerical external replication in CRCNS alm-3.",
   "confirmatory_language": "The alm-3 numerical pipeline is frozen before extracting the replication statistics on this branch, but the Li et al. 2016 publication and its qualitative conclusions are public and known. This is therefore a frozen numerical external replication, not an outcome-blind preregistration. Chen is a de novo raw-data reanalysis of a system whose published conclusions and prior processed-figure analysis are already known.",
+  "common_population_code": {
+    "neurons": "Putative pyramidal units only.",
+    "time_window": "Final 400 ms before the go cue (CueTime).",
+    "training_trials": "Correct, good, non-photostimulation control trials only.",
+    "choice_direction": "Within each training fold, CD = mean population spike-count vector on correct right trials minus mean vector on correct left trials, normalized to unit Euclidean norm.",
+    "cross_fitted_auc": "Five stratified folds when each class has at least 5 correct control trials; otherwise the maximum feasible number of folds >=2. Test-trial CD projections are pooled across folds and AUC is oriented so larger values mean better separation of correct right versus correct left trials.",
+    "recovery_projection": "A separate CD is fit on all eligible correct control trials only, then applied without refitting to perturbation trials. Choice separation is mean CD projection for right-condition trials minus mean projection for left-condition trials."
+  },
   "chen": {
     "dataset": "Chen et al. 2021 Cell; Zenodo 6713616 (alm-7)",
     "raw_input": "session-level data_structure_*.mat spike/trial objects; no published figure coordinates are used to construct the raw predictors or raw outcomes",
-    "direct_primary_predictor": "Control-trial bilateral choice-code coupling: separate left/right linear choice directions are estimated from correct control trials; population spike-count projections are evaluated in the final 400 ms before the go cue; Spearman correlation of simultaneous left/right projections is calculated across both trial types and averaged across eligible standard-task sessions within mouse.",
+    "direct_primary_predictor": "Control-trial bilateral choice-code coupling: separate left/right control-trained CDs are applied to simultaneous control trials in the final 400 ms before the go cue; Spearman correlation of left/right projections is calculated across both trial conditions and averaged across eligible standard-task sessions within mouse.",
     "direct_primary_outcomes": [
-      "Raw neuronal recovery after unilateral ALM photoinhibition: end-of-delay choice separation on the perturbed hemisphere along the control-trained choice direction divided by matched control choice separation, computed separately for left- and right-ALM perturbation.",
-      "Raw behavioral recovery after unilateral ALM photoinhibition: matched photoinhibition accuracy divided by control accuracy, computed separately by intervention side."
+      "Raw neuronal recovery after unilateral ALM photoinhibition: end-of-delay choice separation on the perturbed hemisphere along the control-trained CD divided by matched control choice separation, computed separately for left- and right-ALM perturbation.",
+      "Raw behavioral recovery after unilateral ALM photoinhibition: balanced photoinhibition accuracy divided by balanced control accuracy, computed separately by intervention side."
     ],
-    "direct_primary_test": "Mouse-level Spearman association of bilateral control-trial coupling with each side-specific recovery outcome, with mouse-label permutation and leave-one-mouse-out linear prediction. Right and left intervention directions are reported separately rather than pooled because the published system is directionally asymmetric.",
-    "transferable_predictor": "Control-trial local population choice-code strength in the final 400 ms before the go cue, defined as cross-fitted AUC of the control-trained linear choice projection for upcoming lick direction. This predictor is computed without perturbation trials and is the metric frozen for external transfer to alm-3.",
+    "direct_primary_test": "Mouse-level Spearman association of bilateral control-trial coupling with each side-specific recovery outcome, using 500,000 mouse-label permutations and leave-one-mouse-out linear prediction. Right and left intervention directions are reported separately rather than pooled because the published system is directionally asymmetric.",
+    "transferable_predictor": "Control-trial local population choice-code strength in the final 400 ms before the go cue, defined by the frozen common cross-fitted AUC. This predictor is computed without perturbation trials and is the metric frozen for external transfer to alm-3.",
     "eligibility": "Standard-task simultaneous bilateral ALM sessions; putative pyramidal units; >5 simultaneously recorded units in each hemisphere for the direct bilateral analysis and >5 trials per required condition; mouse is the inferential unit."
   },
   "alm3_external_replication": {
     "dataset": "Li, Daie, Svoboda & Druckmann 2016 Nature; CRCNS alm-3, DOI 10.6080/K0RB72JW",
     "input": "Processed session MATLAB objects containing sorted spike times, trial identities, behavior, and photostimulation types; raw voltage traces are not required.",
     "population": "Mice/sessions with simultaneous electrophysiology and photoinhibition, excluding callosotomy conditions and source-documented do-not-analyze photostimulation codes.",
-    "primary_predictor": "Control-trial local population choice-code strength in the final 400 ms before the go cue, defined identically to the transferable Chen predictor as cross-fitted AUC of a linear difference-of-means choice direction using putative pyramidal units.",
-    "primary_outcome": "Neuronal recovery after ipsilateral early-delay photoinhibition (PhotostimulationType 4): choice separation along the control-trained choice direction in the final 400 ms before the go cue divided by matched control choice separation. The ratio is computed within session and averaged within mouse.",
+    "primary_predictor": "Control-trial local population choice-code strength in the final 400 ms before the go cue, defined identically to the transferable Chen predictor by the frozen common cross-fitted AUC using putative pyramidal units.",
+    "primary_outcome": "Neuronal recovery after ipsilateral early-delay photoinhibition (PhotostimulationType 4): choice separation along the control-trained CD in the final 400 ms before the go cue divided by matched control choice separation. The ratio is computed within session and averaged within mouse.",
     "secondary_outcome": "Behavioral recovery for PhotostimulationType 4: balanced percent-correct on photoinhibition trials divided by balanced percent-correct on matched control trials, averaged within mouse.",
     "negative_control": "Contralateral early-delay photoinhibition (PhotostimulationType 5) is analyzed separately as a direction/control condition and is not substituted for the locked primary outcome.",
     "inferential_unit": "Mouse. Session-level results are descriptive/repeated measures only.",
     "primary_statistic": "Spearman rank correlation across mouse means between the frozen control-only predictor and neuronal recovery.",
     "primary_null": "No positive monotonic association.",
-    "success_criterion": "Primary Spearman rho > 0 with exact or exhaustive mouse-label one-sided permutation P < 0.05, plus positive leave-one-mouse-out R2. Failure of either criterion is reported as a failed external replication.",
-    "uncertainty": "Mouse-cluster bootstrap 95% interval for Spearman rho.",
+    "permutation_test": "500,000 one-sided mouse-label permutations with seed 20261012; if the eligible mouse count is <=9, all label permutations are enumerated instead.",
+    "success_criterion": "Primary Spearman rho > 0 with one-sided permutation P < 0.05, plus positive leave-one-mouse-out R2. Failure of either criterion is reported as a failed external replication.",
+    "uncertainty": "50,000 mouse bootstrap resamples for a percentile 95% interval for Spearman rho.",
     "baselines": ["number of eligible units", "control behavioral accuracy"],
     "missingness_rule": "No imputation. A mouse contributes only if it has at least one session with finite predictor and primary outcome; all eligible sessions are averaged equally within mouse.",
     "multiplicity": "Only the neuronal-recovery association is primary. Behavioral recovery, contralateral perturbation, session-level associations, alternative time windows, and alternative decoders are secondary or sensitivity analyses and cannot replace the primary result."
