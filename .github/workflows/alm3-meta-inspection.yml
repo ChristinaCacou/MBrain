@@ -1,0 +1,22 @@
+name: alm-3 metadata inspection
+on:
+  push:
+    branches: [raw-chen-alm3-replication-20261012]
+    paths:
+      - '.github/workflows/alm3-meta-inspection.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy
+      - run: python raw_replication/inspect_alm3_metadata.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-meta-inspection
+          path: analysis/alm3_meta_inspection/*
+          retention-days: 90
