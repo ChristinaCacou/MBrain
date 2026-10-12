@@ -1,0 +1,58 @@
+name: Falconer OSF wcuj8 manifest diagnostic
+
+on:
+  push:
+    branches: [falconer-osf-reanalysis]
+    paths:
+      - '.github/workflows/falconer-osf-manifest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enumerate public OSF wcuj8 files only
+        run: |
+          mkdir -p analysis/falconer_osf/manifest_diag
+          python - <<'PY'
+          import csv,json,urllib.request
+          from pathlib import Path
+          guid='wcuj8'
+          UA={'User-Agent':'Falconer-manifest-diagnostic/1.0'}
+          starts=[f'https://api.osf.io/v2/nodes/{guid}/files/?page[size]=100',f'https://api.osf.io/v2/nodes/{guid}/files/osfstorage/?page[size]=100']
+          q=list(starts); seen=set(); rows=[]; errs=[]
+          def get(u):
+              r=urllib.request.Request(u,headers=UA)
+              with urllib.request.urlopen(r,timeout=60) as f:return json.load(f)
+          while q:
+              u=q.pop(0)
+              if not u or u in seen: continue
+              seen.add(u)
+              try:o=get(u)
+              except Exception as e: errs.append({'url':u,'error':repr(e)}); continue
+              for it in o.get('data',[]):
+                  a=it.get('attributes') or {}; rel=it.get('relationships') or {}; li=it.get('links') or {}
+                  rows.append({'id':it.get('id'),'kind':a.get('kind') or it.get('type'),'name':a.get('name'),'materialized_path':a.get('materialized_path'),'size':a.get('size'),'provider':a.get('provider'),'download':li.get('download')})
+                  href=(((((rel.get('files') or {}).get('links') or {}).get('related') or {}).get('href')))
+                  if href:q.append(href+('&' if '?' in href else '?')+'page[size]=100')
+              nxt=(o.get('links') or {}).get('next')
+              if nxt:q.append(nxt)
+          out=Path('analysis/falconer_osf/manifest_diag')
+          with open(out/'osf_manifest.csv','w',newline='') as f:
+              w=csv.DictWriter(f,fieldnames=['id','kind','name','materialized_path','size','provider','download']);w.writeheader();w.writerows(rows)
+          (out/'audit.json').write_text(json.dumps({'n_rows':len(rows),'errors':errs},indent=2))
+          print('ROWS',len(rows)); print('ERRORS',errs)
+          for r in rows: print(r['size'], r['materialized_path'])
+          PY
+      - name: Upload manifest diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: falconer-wcuj8-manifest
+          path: analysis/falconer_osf/manifest_diag
+          retention-days: 14
