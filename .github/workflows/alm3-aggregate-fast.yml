@@ -1,0 +1,31 @@
+name: ALM3 frozen aggregate fast
+on:
+  push:
+    branches: [alm3-aggregate-fast-20261012]
+    paths:
+      - '.github/workflows/alm3-aggregate-fast.yml'
+      - 'alm3_replication/aggregate_fast.py'
+  workflow_dispatch:
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alm3-session-*
+          path: downloaded-results
+          merge-multiple: false
+          run-id: 38252631497
+          github-token: ${{ github.token }}
+      - run: python alm3_replication/aggregate_fast.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-frozen-replication-fast-final
+          path: analysis/alm3_replication/
+          retention-days: 90
