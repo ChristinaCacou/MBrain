@@ -1,17 +1,25 @@
 from dandi.dandiapi import DandiAPIClient
 from pynwb import NWBHDF5IO
-import requests, json, numpy as np
+import requests, json, numpy as np, re
 from pathlib import Path
 
 out=Path('analysis/alm3_deep_schema'); out.mkdir(parents=True,exist_ok=True)
 with DandiAPIClient() as client:
     ds=client.get_dandiset('000011','draft')
-    assets=[a for a in ds.get_assets() if 'behavior+ecephys+ogen.nwb' in a.path][:3]
+    all_assets=[a for a in ds.get_assets() if 'behavior+ecephys+ogen.nwb' in a.path]
+    first={}
+    for a in all_assets:
+        subject=a.path.split('/')[0]
+        first.setdefault(subject,a)
+    subjects=sorted(first)
+    # Representative subjects spanning the sorted cohort; schema-only inspection under the frozen lock.
+    idx=sorted(set([0,2,4,6,8,10,12,14,16,len(subjects)-1]))
+    assets=[first[subjects[i]] for i in idx if i < len(subjects)]
     rows=[]
     for ai,a in enumerate(assets):
         url=a.get_content_url(follow_redirects=1, strip_query=False)
         path=Path(f'alm3_replication/tmp_{ai}.nwb')
-        with requests.get(url,stream=True,timeout=180) as r:
+        with requests.get(url,stream=True,timeout=240) as r:
             r.raise_for_status()
             with open(path,'wb') as f:
                 for chunk in r.iter_content(8*1024*1024):
@@ -19,24 +27,36 @@ with DandiAPIClient() as client:
         with NWBHDF5IO(str(path),'r',load_namespaces=True) as io:
             nwb=io.read(); df=nwb.trials.to_dataframe(); udf=nwb.units.to_dataframe()
             info={'asset_path':a.path,'subject':getattr(nwb.subject,'subject_id',None),'n_trials':len(df),'n_units':len(udf),
-                  'trial_uniques':{},'acquisition':{},'ogen_sites':{},'unit_locations':[]}
+                  'trial_uniques':{},'acquisition':{},'stimulus':{},'ogen_sites':{},'unit_locations':[]}
             for c in df.columns:
-                vals=df[c].astype(str).value_counts(dropna=False).head(30)
+                vals=df[c].astype(str).value_counts(dropna=False).head(50)
                 info['trial_uniques'][c]={str(k):int(v) for k,v in vals.items()}
-            for k,obj in nwb.acquisition.items():
-                d={'class':obj.__class__.__name__,'description':getattr(obj,'description','')}
-                if hasattr(obj,'time_series'):
-                    d['time_series']={}
-                    for n,ts in obj.time_series.items():
-                        x={'class':ts.__class__.__name__,'description':getattr(ts,'description',''),'unit':getattr(ts,'unit',None)}
+            def summarize_container(container):
+                ans={}
+                for k,obj in container.items():
+                    d={'class':obj.__class__.__name__,'description':getattr(obj,'description','')}
+                    if hasattr(obj,'time_series'):
+                        d['time_series']={}
+                        for n,ts in obj.time_series.items():
+                            x={'class':ts.__class__.__name__,'description':getattr(ts,'description',''),'unit':getattr(ts,'unit',None)}
+                            try:
+                                data=np.asarray(ts.data[:]); x['data_shape']=list(data.shape); x['data_unique']=[str(z) for z in np.unique(data)[:30]]
+                            except Exception as e: x['data_error']=repr(e)
+                            try:
+                                tt=np.asarray(ts.timestamps[:]); x['n_timestamps']=int(len(tt)); x['first_timestamps']=[float(z) for z in tt[:20]]
+                            except Exception as e: x['timestamp_error']=repr(e)
+                            d['time_series'][n]=x
+                    else:
                         try:
-                            data=np.asarray(ts.data[:]); x['data_shape']=list(data.shape); x['data_unique']=[str(z) for z in np.unique(data)[:30]]
-                        except Exception as e: x['data_error']=repr(e)
+                            data=np.asarray(obj.data[:]); d['data_shape']=list(data.shape); d['data_unique']=[str(z) for z in np.unique(data)[:30]]
+                        except Exception: pass
                         try:
-                            tt=np.asarray(ts.timestamps[:]); x['n_timestamps']=int(len(tt)); x['first_timestamps']=[float(z) for z in tt[:20]]
-                        except Exception as e: x['timestamp_error']=repr(e)
-                        d['time_series'][n]=x
-                info['acquisition'][k]=d
+                            tt=np.asarray(obj.timestamps[:]); d['n_timestamps']=int(len(tt)); d['first_timestamps']=[float(z) for z in tt[:30]]
+                        except Exception: pass
+                    ans[k]=d
+                return ans
+            info['acquisition']=summarize_container(nwb.acquisition)
+            info['stimulus']=summarize_container(nwb.stimulus)
             for k,site in nwb.ogen_sites.items():
                 info['ogen_sites'][k]={'description':getattr(site,'description',''),'location':getattr(site,'location',''),'excitation_lambda':getattr(site,'excitation_lambda',None)}
             for eg in nwb.electrode_groups.values():
