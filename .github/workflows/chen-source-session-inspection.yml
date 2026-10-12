@@ -4,6 +4,7 @@ on:
     branches: [raw-chen-alm3-replication-20261012]
     paths:
       - '.github/workflows/chen-source-session-inspection.yml'
+      - 'raw_replication/extract_chen_source_sessions.py'
   workflow_dispatch:
 jobs:
   inspect:
