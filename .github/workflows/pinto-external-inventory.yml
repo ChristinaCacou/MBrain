@@ -1,0 +1,33 @@
+name: Pinto external source inventory
+
+on:
+  push:
+    branches: [causal-pinto-external-20261011]
+    paths:
+      - '.github/workflows/pinto-external-inventory.yml'
+      - 'causal_pinto/inventory_sources.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: causal-pinto-external-20261011
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests h5py numpy
+      - run: python causal_pinto/inventory_sources.py
+      - name: Commit inventory
+        run: |
+          git config user.name causal-pinto-bot
+          git config user.email actions@users.noreply.github.com
+          git add analysis/pinto_external/source_inventory.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Inventory Pinto external source data'
+          git push origin HEAD:causal-pinto-external-20261011
