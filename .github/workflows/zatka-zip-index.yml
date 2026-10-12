@@ -1,0 +1,17 @@
+name: Zatka split ZIP index
+on:
+  push:
+    branches: [submission-final-audit-20261012]
+    paths: ['.github/workflows/zatka-zip-index.yml','zatka_primary/index_split_zip.py']
+  workflow_dispatch:
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python zatka_primary/index_split_zip.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-split-zip-index
+          path: analysis/zatka_primary/split_zip_index.json
+          retention-days: 90
