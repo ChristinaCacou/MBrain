@@ -1,0 +1,21 @@
+name: Guo 2017 frozen cross-loop numerical test
+on:
+  push:
+    branches: [transport-theorem-guo-20261012]
+    paths:
+      - 'external_replication/guo2017_crossloop_analysis.py'
+      - 'external_replication/GUO2017_CROSSLOOP_LOCK.md'
+      - '.github/workflows/guo2017-crossloop-analysis.yml'
+  workflow_dispatch:
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet requests h5py remfile numpy pandas scipy scikit-learn
+      - run: python external_replication/guo2017_crossloop_analysis.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guo2017-crossloop-result
+          path: analysis/guo2017_crossloop/
