@@ -1,0 +1,20 @@
+{
+  "status": "POST_REVEAL_SPATIAL_SENSITIVITY",
+  "workflow_run": 38312782135,
+  "artifact": "zatka-spatial-sensitivity-final",
+  "artifact_sha256": "47113d22d72ab6ee6b732e6b4353429e1d6518cbd990d68ccd2ef2ffe7000710",
+  "n_regions": 12,
+  "raw_spearman_rho": 0.3846153846153847,
+  "median_nearest_neighbor_um": 714.551642676437,
+  "median_pairwise_um": 3536.891670469767,
+  "moran_I_pui": 0.1676794078247486,
+  "moran_I_outcome": -0.17738826081508313,
+  "coordinate_adjusted_partial_rank": {"rho": 0.35769570573826537, "permutation_p_one_sided": 0.17068965862068275, "permutation_p_two_sided": 0.341991316017368},
+  "moran_eigenvector_adjusted_partial_rank": {"rho": 0.3987562623104852, "permutation_p_one_sided": 0.12574374851250297, "permutation_p_two_sided": 0.251503496993006},
+  "gls_rank_sensitivities": [
+    {"length_um": 714.551642676437, "slope_rank": 0.23872693769067208, "se": 0.36982614427310284, "t": 0.6455112527533509, "df": 10, "one_sided_p": 0.26656331918177645},
+    {"length_um": 3536.891670469767, "slope_rank": 0.11616556999457996, "se": 0.4268553450013324, "t": 0.27214270912835203, "df": 10, "one_sided_p": 0.3955243087286202},
+    {"length_um": 7073.783340939534, "slope_rank": 0.1027496204354326, "se": 0.4336400542590887, "t": 0.2369467936050999, "df": 10, "one_sided_p": 0.40874072593920696}
+  ],
+  "interpretation": "Spatially adjusted post-reveal sensitivities do not rescue the frozen CPG ranking. They are descriptive robustness checks under alternative spatial controls, not replacements for the locked primary permutation test."
+}
