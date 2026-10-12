@@ -1,0 +1,19 @@
+{
+  "status": "POST_REVEAL_PRIMARY_ZATKA_RECONSTRUCTION",
+  "workflow_run": 38313250735,
+  "artifact": "zatka-primary-reconstruction",
+  "artifact_sha256": "551ce9ba0aa36c370e4f42acc8fe26ac95de8bbb1407df24002a43eb7c59bad2",
+  "n_raw_trials_total": 47002,
+  "n_equal_nonzero_contrast_trials": 6045,
+  "n_sessions": 91,
+  "n_coordinates": 52,
+  "n_coordinates_mapped_to_frozen_targets": 48,
+  "mapped_regions": ["MOp","MOs","RSP","SSp","VISam","VISp","VISpm"],
+  "n_frozen_regions_recovered": 7,
+  "cpg_vs_primary_raw_effect": {"rho": -0.642857142857143, "one_sided_permutation_p": 0.9448281103437793},
+  "primary_vs_secondary_effect_spearman": 0.0,
+  "primary_vs_secondary_effect_mae": 0.18600587220305576,
+  "primary_vs_secondary_effect_max_abs_error": 0.3990706180221154,
+  "mapping_rule": "First frozen-target Beryl label encountered at exact laser ML/AP center while descending DV +0.25 to -3.0 mm, with ACA/ORB/RSP/SSp subdivisions collapsed to frozen target names. Mapping uses anatomy only, not outcome magnitude.",
+  "interpretation": "This post-reveal audit independently reconstructs coordinate-level choice effects from the primary trial table but does not reproduce the pinned secondary 12-region aggregation. It is therefore a provenance sensitivity, not a replacement outcome table or confirmatory test."
+}
