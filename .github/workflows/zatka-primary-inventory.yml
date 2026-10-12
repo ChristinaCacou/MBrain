@@ -1,0 +1,20 @@
+name: Zatka primary archive inventory
+on:
+  push:
+    branches: [zatka-primary-spatial-chen-contrast-20261012]
+    paths: ['zatka_primary/inventory_figshare.py','.github/workflows/zatka-primary-inventory.yml']
+  workflow_dispatch:
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests
+      - run: python zatka_primary/inventory_figshare.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-primary-inventory
+          path: analysis/zatka_primary/figshare_inventory.json
+          retention-days: 90
