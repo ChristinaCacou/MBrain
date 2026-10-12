@@ -1,0 +1,20 @@
+name: Zatka code inspect
+on:
+  push:
+    branches: [zatka-primary-spatial-chen-contrast-20261012]
+    paths: ['zatka_primary/inspect_code.py','.github/workflows/zatka-code-inspect.yml']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests
+      - run: python zatka_primary/inspect_code.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-code-inspect
+          path: analysis/zatka_primary/code_inspect
+          retention-days: 90
