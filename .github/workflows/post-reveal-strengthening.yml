@@ -1,0 +1,22 @@
+name: Post-reveal strengthening diagnostics
+on:
+  push:
+    branches: [post-reveal-strengthening-20261011]
+    paths:
+      - 'causal_pui/post_reveal_strengthening.py'
+      - '.github/workflows/post-reveal-strengthening.yml'
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy pandas scipy
+      - run: python causal_pui/post_reveal_strengthening.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: post-reveal-strengthening
+          path: analysis/pui_blind_fixedC/post_reveal_strengthening
