@@ -1,0 +1,34 @@
+name: Pinto external perturbation validation
+
+on:
+  push:
+    branches: [causal-pinto-external-20261011]
+    paths:
+      - '.github/workflows/pinto-external-validation.yml'
+      - 'causal_pinto/run_external_validation.py'
+      - 'analysis/pinto_external/EXTERNAL_TEST_LOCK.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: causal-pinto-external-20261011
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests numpy pandas scipy
+      - run: python causal_pinto/run_external_validation.py
+      - name: Commit results
+        run: |
+          git config user.name causal-pinto-bot
+          git config user.email actions@users.noreply.github.com
+          git add analysis/pinto_external/external_region_table.csv analysis/pinto_external/external_result.json analysis/pinto_external/EXTERNAL_RESULT.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add locked Pinto external validation result'
+          git push origin HEAD:causal-pinto-external-20261011
