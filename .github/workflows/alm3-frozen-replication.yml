@@ -11,18 +11,14 @@ jobs:
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
     steps:
+      - uses: actions/checkout@v4
       - id: m
         shell: bash
         run: |
-          aws s3 ls --no-sign-request --recursive s3://crcnsarchive/ > listing.txt
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
-          keys=[]
-          for line in open('listing.txt'):
-              p=line.split(maxsplit=3)
-              if len(p)==4 and p[3].startswith('alm-3/live/data/data_structure_files/data_structure_') and p[3].endswith('.mat'):
-                  keys.append({'key':p[3]})
-          print('matrix='+json.dumps(keys,separators=(',',':')))
+          keys=json.load(open('raw_replication/alm3_keys.json'))
+          print('matrix='+json.dumps([{'key':k} for k in keys],separators=(',',':')))
           PY
   session:
     needs: prepare
