@@ -1,0 +1,21 @@
+name: Pinto 2019 source-data inspect
+on:
+  push:
+    branches: [external-replication-chen2024-20261012]
+    paths:
+      - 'external_replication/pinto2019_source_inspect.py'
+      - '.github/workflows/pinto2019-source-inspect.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet numpy scipy
+      - run: python external_replication/pinto2019_source_inspect.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pinto2019-source-inspect
+          path: analysis/pinto2019_source/
+          retention-days: 90
