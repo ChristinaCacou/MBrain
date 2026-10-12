@@ -1,0 +1,22 @@
+name: Zatka mapping uncertainty sensitivity
+on:
+  push:
+    branches: [external-replication-chen2024-20261012]
+    paths:
+      - 'zatka_primary/mapping_uncertainty.py'
+      - '.github/workflows/zatka-mapping-uncertainty.yml'
+  workflow_dispatch:
+jobs:
+  sensitivity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet numpy pandas scipy h5py requests iblatlas
+      - run: python zatka_primary/reconstruct_primary_atlas.py
+      - run: python zatka_primary/mapping_uncertainty.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-mapping-uncertainty
+          path: analysis/zatka_mapping_uncertainty/
+          retention-days: 90
