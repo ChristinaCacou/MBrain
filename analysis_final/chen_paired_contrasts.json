@@ -1,0 +1,10 @@
+{
+  "status": "POST_HOC_PAIRED_SPECIFICITY_AUDIT",
+  "workflow_run": 38312829941,
+  "artifact": "chen-specificity-final",
+  "artifact_sha256": "ca956da215c3e81876d7cb6899bd242ec273016ed5f982256cd6f3f21a114a44",
+  "right_behavior_vs_left_behavior": {"delta_rho": 0.5758513931888545, "exact_one_sided_p": 0.07512664794921875, "exact_two_sided_p": 0.1502532958984375, "bootstrap_95_ci": [-0.02728226652675758, 1.1630358842007849], "n_mice": 18, "bootstrap_resamples": 50000},
+  "right_behavior_vs_right_neuronal": {"delta_rho": 0.22291021671826622, "exact_one_sided_p": 0.2452392578125, "exact_two_sided_p": 0.490478515625, "bootstrap_95_ci": [-0.3792427290978218, 0.835606012778788], "n_mice": 18, "bootstrap_resamples": 50000},
+  "right_neuronal_vs_left_neuronal": {"delta_rho": 0.2497420020639835, "exact_one_sided_p": 0.2565956115722656, "exact_two_sided_p": 0.5131912231445312, "bootstrap_95_ci": [-0.40083507306889354, 0.9075848860675172], "n_mice": 18, "bootstrap_resamples": 50000},
+  "interpretation": "The positive right-behavior association is robust as an individual endpoint, but formal paired tests do not establish statistically significant side or endpoint specificity."
+}
