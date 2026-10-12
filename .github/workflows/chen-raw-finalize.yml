@@ -6,7 +6,7 @@ on:
       - '.github/workflows/chen-raw-finalize.yml'
   workflow_dispatch:
 permissions:
-  actions: read
+  actions: write
   contents: read
 jobs:
   aggregate:
@@ -17,6 +17,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Close original matrix run after all session artifacts completed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run cancel 38270386016 || true
+          sleep 10
       - name: Download completed raw Chen session artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -32,4 +38,4 @@ jobs:
           name: chen-direct-final-forced
           path: analysis/chen_direct_final/*
           retention-days: 90
-# trigger finalized aggregation after all 59 raw-session artifacts were present
+# Original run had 59/59 session artifacts but remained open before aggregate scheduling.
