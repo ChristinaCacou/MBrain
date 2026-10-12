@@ -1,0 +1,34 @@
+name: Finalize Ghaderi raw NWB reconstruction
+on:
+  push:
+    branches: [ghaderi-matched-validation-20261011]
+    paths: ['.github/workflows/ghaderi-raw-finalize.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Wait for raw NWB matrix and download artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run watch 38282285751 --exit-status
+          mkdir -p all-ghaderi-ephys opto-artifact
+          gh run download 38282285751 -p 'ghaderi-ephys-*' -D all-ghaderi-ephys
+          gh run download 38282285751 -n 'ghaderi-opto-raw' -D opto-artifact
+          find all-ghaderi-ephys -type f | sort
+      - run: pip install numpy scipy pandas
+      - run: python ghaderi_raw/aggregate_raw.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghaderi-raw-final-forced
+          path: analysis/ghaderi_raw_final/*
+          retention-days: 90
+# trigger
