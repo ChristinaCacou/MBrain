@@ -1,0 +1,34 @@
+{
+  "source_urls": {
+    "fig2": "https://cdn.elifesciences.org/articles/70263/elife-70263-fig2-data1-v1.zip",
+    "fig4": "https://cdn.elifesciences.org/articles/70263/elife-70263-fig4-data1-v1.zip"
+  },
+  "downloads": {
+    "fig2": {
+      "zip_sha256": "2eb25c0fd9d9e5ab239d7c9299c2db3fbd4d4e5f016a8e5e5ee4d69669f5d57d",
+      "zip_size": 9842,
+      "members": [
+        "fig2_sourceData.mat"
+      ],
+      "files": {
+        "fig2_sourceData.mat": {
+          "size": 15440,
+          "sha256": "7f6d1dbf11e0c7afe87fe37a2be8ce2b72c71eaea179d4df20aa758f9273e021"
+        }
+      }
+    },
+    "fig4": {
+      "zip_sha256": "6d965afec886bb61585774c1ea8d88a21758fb74a7b600766da11969a258c728",
+      "zip_size": 14566,
+      "members": [
+        "fig4_sourceData.mat"
+      ],
+      "files": {
+        "fig4_sourceData.mat": {
+          "size": 23216,
+          "sha256": "412d029a8f67d4551a202bf80cedd7096173e102bdd834bf7712c4991da592e9"
+        }
+      }
+    }
+  }
+}
