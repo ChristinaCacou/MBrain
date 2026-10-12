@@ -51,6 +51,16 @@ def as_list(x):
     return [x]
 
 def get_hash_value(h,key=None,index=None):
+    # MATLAB cell-array hashes are represented by mat73 as a list of
+    # {keyNames, value, descr} dictionaries. Older MAT files may expose the
+    # original hash object with parallel keyNames/value fields.
+    if isinstance(h,list):
+        if index is not None:
+            return fld(h[index],'value')
+        for item in h:
+            if str1(fld(item,'keyNames','')).lower()==key.lower():
+                return fld(item,'value')
+        raise KeyError(key)
     vals=as_list(fld(h,'value',[]))
     if index is not None: return vals[index]
     keys=[str1(z) for z in as_list(fld(h,'keyNames',[]))]
@@ -79,7 +89,6 @@ def trial_side_masks(obj,ntr):
     names=[str1(z) for z in as_list(fld(obj,'trialTypeStr',[]))]
     mat=np.asarray(fld(obj,'trialTypeMat'))
     if mat.ndim==1: mat=mat.reshape(1,-1)
-    # mat73 can preserve MATLAB transposition; orient rows to trial types
     if mat.shape[0]!=len(names) and mat.shape[1]==len(names): mat=mat.T
     def row(name):
         if name not in names:return np.zeros(ntr,bool)
@@ -126,8 +135,13 @@ def analyze(obj,animal,session):
                 ca=float(np.mean(hit[ci])); sa=float(np.mean(hit[si])); diffs.append(ca-sa)
                 detail[lab]={'n_control':int(len(ci)),'n_stim':int(len(si)),'control_accuracy':ca,'stim_accuracy':sa,'impairment':ca-sa}
         outcome[hemi]={'impairment':float(np.mean(diffs)) if len(diffs)==2 else None,'detail':detail}
+    # mat73 represents eventSeriesHash as one hash dict per unit; each hash's
+    # `value` field is the unit structure itself.
     esh=fld(obj,'eventSeriesHash')
-    units=as_list(fld(esh,'value',[]))
+    if isinstance(esh,list):
+        units=[fld(h,'value') for h in esh if fld(h,'value') is not None]
+    else:
+        units=as_list(fld(esh,'value',[]))
     predictors={'left':[],'right':[]}; unit_counts={'left':0,'right':0}
     trial_R_ids=(np.where(control&right)[0]+1).astype(int); trial_L_ids=(np.where(control&left)[0]+1).astype(int)
     for unit in units:
