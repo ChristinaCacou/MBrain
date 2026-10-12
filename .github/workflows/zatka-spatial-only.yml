@@ -1,0 +1,21 @@
+name: Zatka spatial sensitivity only
+on:
+  push:
+    branches: [zatka-primary-spatial-chen-contrast-20261012]
+    paths: ['.github/workflows/zatka-spatial-only.yml']
+  workflow_dispatch:
+jobs:
+  spatial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install numpy pandas scipy
+      - run: python zatka_primary/spatial_sensitivity.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-spatial-sensitivity-final
+          path: analysis/zatka_spatial/*
+          retention-days: 90
