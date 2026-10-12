@@ -1,0 +1,36 @@
+name: Zatka code inspect
+on:
+  push:
+    branches: [submission-final-audit-20261012]
+    paths: ['.github/workflows/zatka-code-inspect.yml']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and inspect code
+        run: |
+          mkdir -p analysis/zatka_code
+          curl -L --retry 3 -o /tmp/code.zip https://ndownloader.figshare.com/files/24786170
+          unzip -q /tmp/code.zip -d /tmp/zcode
+          find /tmp/zcode -type f | sort > analysis/zatka_code/file_list.txt
+          grep -RniE 'exp47b|opto|inactiv|laser|choiceProb|galvo|laserPos|laser.*coord|stim.*coord' /tmp/zcode > analysis/zatka_code/grep_hits.txt || true
+          python - <<'PY'
+          from pathlib import Path
+          out=Path('analysis/zatka_code/relevant_code.txt')
+          pats=('exp47b','opto','inactiv','laser')
+          chunks=[]
+          for p in Path('/tmp/zcode').rglob('*'):
+              if not p.is_file() or p.suffix.lower() not in {'.m','.py','.txt','.md'}: continue
+              try:t=p.read_text(errors='ignore')
+              except:continue
+              if any(x.lower() in t.lower() or x.lower() in p.name.lower() for x in pats):
+                  chunks.append(f'\n===== {p} =====\n'+t[:120000])
+          out.write_text(''.join(chunks))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-code-inspect
+          path: analysis/zatka_code/*
+          retention-days: 90
