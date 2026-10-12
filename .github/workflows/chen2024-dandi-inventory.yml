@@ -1,0 +1,21 @@
+name: Chen 2024 DANDI inventory
+on:
+  push:
+    branches: [external-replication-chen2024-20261012]
+    paths:
+      - 'external_replication/chen2024_inventory.py'
+      - '.github/workflows/chen2024-dandi-inventory.yml'
+  workflow_dispatch:
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Query DANDI 000363
+        run: python external_replication/chen2024_inventory.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen2024-dandi-inventory
+          path: analysis/chen2024_external/
+          retention-days: 90
