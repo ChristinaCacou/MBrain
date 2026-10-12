@@ -12,6 +12,8 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - name: Install dependency
+        run: python -m pip install --quiet h5py
       - name: Inspect three smallest NWB files
         run: python external_replication/chen2024_schema.py
       - uses: actions/upload-artifact@v4
