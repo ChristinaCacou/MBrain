@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install requests h5py numpy
+      - run: pip install requests h5py numpy scipy
       - run: python causal_pinto/inventory_sources.py
       - name: Commit inventory
         run: |
