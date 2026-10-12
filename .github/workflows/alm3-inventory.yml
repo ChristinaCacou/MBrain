@@ -1,0 +1,19 @@
+name: alm-3 public S3 inventory
+on:
+  push:
+    branches: [raw-chen-alm3-replication-20261012]
+    paths:
+      - '.github/workflows/alm3-inventory.yml'
+      - 'raw_replication/list_alm3_s3.sh'
+  workflow_dispatch:
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash raw_replication/list_alm3_s3.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-inventory
+          path: analysis/alm3_inventory/s3_listing.txt
+          retention-days: 90
