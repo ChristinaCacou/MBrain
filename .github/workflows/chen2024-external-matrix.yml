@@ -1,0 +1,85 @@
+name: Chen 2024 frozen external bilateral-coupling test
+on:
+  push:
+    branches: [external-replication-chen2024-20261012]
+    paths:
+      - '.github/workflows/chen2024-external-matrix.yml'
+  workflow_dispatch:
+jobs:
+  session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        asset:
+          - 75d47485-02a4-414c-8848-c87a70993a97
+          - af69ab8d-218f-43b3-8bdd-1609a16bfc73
+          - ecd786a9-460d-4077-95c9-e1a5e45c258d
+          - a2c6273d-87cb-4b90-b4cb-267b1fa6d32c
+          - 43272182-3b54-49e6-9fe8-0bfcd78fa803
+          - abc6dc59-f861-4867-a0b7-41faa316f01b
+          - e1e626c9-f11e-4316-95b3-44c4f485d3ef
+          - 0eab806c-c5c3-4d01-bd7c-15e328a7e923
+          - ea7e2fd7-2b9a-4396-b805-1ac166be0551
+          - fd63d0fe-3e97-4b94-bc54-debae6987f9b
+          - 924edde5-40c9-4a1b-bae1-ba76fe5fbbe8
+          - d38ce81d-f9e3-4c5f-9e27-2eaffa1ecd83
+          - 4b70f782-f047-400f-81d6-6ef861fb5860
+          - 3c292805-3e1b-424e-83d7-5fb2118ea27f
+          - 0f452826-8a3b-4d74-bee3-44641b9bf721
+          - c20f23e7-8969-4dba-b3f7-1958210d79dd
+          - af200bc3-5cc0-49d6-9789-9265755f35e9
+          - 46a14fea-0caf-4e2b-819c-9bdf42dd0065
+          - 2953ce80-883a-48b6-9750-c6de9d0028a5
+          - c015dd35-af39-4fcb-b8de-f3a34dc478dd
+          - 6c0863e9-2dc5-447a-8723-4db81127ddaa
+          - 49bc7f67-04ae-446f-aef0-7e401dee35f6
+          - e5e4fa81-20fa-417d-a744-da38d3dd10ab
+          - cd28e31c-518d-4239-9860-d75a61ed8c27
+          - db7055c4-311c-434e-b566-28f97d0bdbe0
+          - 1a6c833f-47a0-496e-9ddd-ad52ba78ea89
+          - 6f6af794-737f-41aa-b8a4-c21ccdd02719
+          - 7f5ab6a7-5bda-405f-92ab-1212db2c982f
+          - a085758f-94b9-4aeb-b7eb-76fa85544547
+          - 9eefad3d-0c04-466f-a3a2-42e060ae8016
+          - ed848e81-8067-4d87-bd5a-d9e6af8013e7
+          - 6057a060-f72d-468a-a2d0-933422b00b2f
+          - 12e4feff-54c4-42fa-a786-1a2d97eb5edb
+          - 40accc35-2e48-44a0-b226-ecaecd203b52
+          - 22a1af71-6263-4b62-8739-32722f15cd0c
+          - 6c33719d-3dc1-4a71-b3d1-101aae53c466
+    env:
+      ASSET_ID: ${{ matrix.asset }}
+      OUTDIR: analysis/chen2024_sessions
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet h5py numpy scipy
+      - run: python external_replication/analyze_chen2024_session.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen2024-session-${{ matrix.asset }}
+          path: analysis/chen2024_sessions/
+          retention-days: 90
+  aggregate:
+    needs: session
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: chen2024-session-*
+          path: all-session-results
+          merge-multiple: false
+      - run: python -m pip install --quiet numpy pandas scipy scikit-learn
+      - env:
+          INPUT_DIR: all-session-results
+        run: python external_replication/aggregate_chen2024.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen2024-external-final
+          path: analysis/chen2024_external_final/
+          retention-days: 90
