@@ -1,0 +1,18 @@
+{
+  "fig2": {
+    "url": "https://cdn.elifesciences.org/articles/70263/elife-70263-fig2-data1-v1.zip",
+    "sha256": "2eb25c0fd9d9e5ab239d7c9299c2db3fbd4d4e5f016a8e5e5ee4d69669f5d57d",
+    "zip_names": [
+      "fig2_sourceData.mat"
+    ],
+    "h5_files": []
+  },
+  "fig4": {
+    "url": "https://cdn.elifesciences.org/articles/70263/elife-70263-fig4-data1-v1.zip",
+    "sha256": "6d965afec886bb61585774c1ea8d88a21758fb74a7b600766da11969a258c728",
+    "zip_names": [
+      "fig4_sourceData.mat"
+    ],
+    "h5_files": []
+  }
+}
