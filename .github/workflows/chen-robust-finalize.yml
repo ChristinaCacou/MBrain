@@ -1,0 +1,33 @@
+name: Finalize Chen reviewer robustness
+on:
+  push:
+    branches: [raw-chen-alm3-replication-20261012]
+    paths: ['.github/workflows/chen-robust-finalize.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Wait for session matrix and download all robustness artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run watch 38281544960 --exit-status
+          mkdir -p all-robust-results
+          gh run download 38281544960 -p 'chen-robust-*' -D all-robust-results
+          find all-robust-results -type f | sort
+      - run: pip install numpy scipy
+      - run: python raw_replication/aggregate_chen_robust.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-robust-final-forced
+          path: analysis/chen_robust_final/*
+          retention-days: 90
+# trigger
