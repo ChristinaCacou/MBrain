@@ -8,7 +8,7 @@ if not any(r.iterdir()):
     with zipfile.ZipFile(z) as zz: zz.extractall(r)
 for fn, ranges in {
  'analysis_compile_all_data_2ALM_CDprojection.m':[(610,720),(920,990)],
- 'analysis_compile_all_data_2ALM_selectivity.m':[(670,780),(1100,1210)]
+ 'analysis_compile_all_data_2ALM_selectivity.m':[(670,780),(1100,1320)]
 }.items():
     p=next(r.rglob(fn)); lines=p.read_text(errors='ignore').splitlines()
     print('\n###',fn)
