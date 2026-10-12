@@ -1,0 +1,31 @@
+name: Ghaderi DANDI asset list
+on:
+  push:
+    branches: [ghaderi-matched-validation-20261011]
+    paths: ['.github/workflows/ghaderi-dandi-list.yml']
+  workflow_dispatch:
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install dandi
+      - name: List relevant assets
+        run: |
+          python - <<'PY'
+          import json
+          from dandi.dandiapi import DandiAPIClient
+          rows=[]
+          with DandiAPIClient() as client:
+            ds=client.get_dandiset('001530','0.260605.0601')
+            for a in ds.get_assets():
+              p=a.path
+              if 'PG019' in p or 'PG021' in p: rows.append({'path':p,'size':a.size,'id':a.identifier})
+          open('dandi_assets.json','w').write(json.dumps(rows,indent=2))
+          print(json.dumps(rows,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with: {name: ghaderi-dandi-assets, path: dandi_assets.json}
+# run
