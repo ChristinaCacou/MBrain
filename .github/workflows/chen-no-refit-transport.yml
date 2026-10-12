@@ -1,0 +1,21 @@
+name: Chen zero-recalibration transport audit
+on:
+  push:
+    branches: [transport-theorem-guo-20261012]
+    paths:
+      - 'external_replication/chen_no_refit_transport.py'
+      - 'analysis_inputs/chen_mouse_rows.csv'
+      - 'analysis_inputs/chen2024_mouse_endpoint_table.csv'
+      - '.github/workflows/chen-no-refit-transport.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet numpy pandas scipy
+      - run: python external_replication/chen_no_refit_transport.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-no-refit-transport
+          path: analysis/chen_no_refit_transport/
