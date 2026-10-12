@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python chen_validation/inspect_raw_source.py | tee chen_validation/raw_source/log.txt
+      - run: mkdir -p chen_validation/raw_source && python chen_validation/inspect_raw_source.py | tee chen_validation/raw_source/log.txt
       - uses: actions/upload-artifact@v4
         with:
           name: chen-raw-source-inspection
@@ -24,4 +24,8 @@ jobs:
             chen_validation/raw_source/candidate_files.json
             chen_validation/raw_source/meta_animal_info.m
             chen_validation/raw_source/log.txt
+            chen_validation/raw_source/scripts/analyses_scripts/analysis_compile_all_data_2ALM_selectivity.m
+            chen_validation/raw_source/scripts/analyses_scripts/analysis_compile_all_data_2ALM_CDprojection.m
+            chen_validation/raw_source/scripts/analyses_scripts/analysis_compile_all_data_2ALM_behavior.m
+            chen_validation/raw_source/scripts/analyses_scripts/analysis_compile_all_data_2ALM_Ctr50msbin_PSTH.m
           retention-days: 90
