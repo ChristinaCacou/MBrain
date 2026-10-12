@@ -1,0 +1,29 @@
+{
+  "dataset": "Li, Daie, Svoboda & Druckmann 2016; CRCNS alm-3 / DANDI 000011 release 0.220126.1907",
+  "lock_status": "FROZEN BEFORE INSPECTION OF NWB TRIAL OR SPIKE VALUES",
+  "purpose": "External replication of the Chen raw same-session test using an independent ALM recording-plus-photoinhibition dataset.",
+  "population": "standard tactile delayed-response sessions containing extracellular ALM spiking, control trials, and unilateral ALM photoinhibition trials; callosotomy-only sessions are excluded if explicitly identified by metadata",
+  "primary_predictor": {
+    "name": "control-trial local choice selectivity",
+    "definition": "For each eligible unit, compute AUC separating right-choice versus left-choice control-trial spike counts in an 800-ms early-delay window from -1.7 to -0.9 s relative to the response/go cue. Transform to 2*abs(AUC-0.5), then average eligible units within the recorded hemisphere/session.",
+    "trial_restriction": "control trials only; correct and error trials included; early-lick/invalid trials excluded where metadata permits",
+    "unit_restriction": "manually curated putative pyramidal units when source metadata expose cell type and quality; otherwise all sorted units with at least 10 control trials per choice are retained and the fallback is reported without changing the metric"
+  },
+  "primary_outcome": {
+    "name": "same-session unilateral photoinhibition behavioral impairment",
+    "definition": "For unilateral ALM photoinhibition of the recorded hemisphere, compute control accuracy minus photoinhibition accuracy separately for right- and left-choice trials and average the two choice-specific differences when both are estimable.",
+    "minimum_trials": "at least 10 control and 5 photoinhibition trials for each included choice side"
+  },
+  "aggregation": "Average eligible sessions within each mouse before primary inference. If multiple recorded hemispheres are present for a mouse, treat mouse-by-hemisphere values as repeated measures and use mouse-blocked permutation; also report side-specific mouse means.",
+  "primary_statistic": "Spearman rank association between frozen control-trial selectivity and same-hemisphere behavioral impairment, with one-sided positive mouse-blocked permutation P value.",
+  "generalization_test": "leave-one-mouse-out linear prediction; report held-out Spearman rho and out-of-sample R2 relative to a training-mean baseline",
+  "success_criterion": "positive primary Spearman association with one-sided P<0.05 AND positive leave-one-mouse-out R2",
+  "secondary_diagnostics": [
+    "session-level association reported descriptively because sessions repeat mice",
+    "side-specific associations when hemisphere metadata permit",
+    "sensitivity to equal-session versus equal-mouse aggregation",
+    "trial-count and eligible-unit coverage"
+  ],
+  "implementation_rule": "Field-name/schema adaptations needed to read NWB are allowed after this lock, but predictor/outcome definitions, windows, directionality, inferential unit and success criterion may not be changed after trial or spike values are inspected.",
+  "publication_awareness": "The qualitative published conclusion that ALM dynamics recover after unilateral perturbation is known. Exact NWB-derived predictor/outcome values and their association are not inspected before this lock."
+}
