@@ -1,0 +1,21 @@
+name: Cancel obsolete alm3 parallel run
+on:
+  push:
+    branches: [alm3-frozen-replication-20261011]
+    paths:
+      - '.github/workflows/cancel-obsolete-alm3-parallel.yml'
+permissions:
+  actions: write
+  contents: read
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/38203413496/cancel" || true
