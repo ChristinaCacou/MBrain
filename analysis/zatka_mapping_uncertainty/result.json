@@ -1,0 +1,24 @@
+{
+  "analysis_status": "POST_REVEAL_ATLAS_MAPPING_SENSITIVITY",
+  "candidate_rule": "Each coordinate may map to any frozen target whose Beryl acronym or collapsed parent appears anywhere along the exact ML/AP vertical atlas trace. Random draws choose uniformly among those admissible labels. This is a stress-test ensemble, not a posterior anatomical probability model.",
+  "n_coordinates": 52,
+  "n_random_mapping_draws": 100000,
+  "n_complete_12_region_draws": 41354,
+  "complete_draw_fraction": 0.41354,
+  "complete_draw_cpg_rho_median": -0.3916083916083916,
+  "complete_draw_cpg_rho_2_5": -0.5524475524475524,
+  "complete_draw_cpg_rho_97_5": -0.1958041958041958,
+  "complete_draw_fraction_cpg_rho_positive": 0.0,
+  "complete_draw_raw_vs_pinned_secondary_rho_median": -0.006993006993006993,
+  "complete_draw_raw_vs_pinned_secondary_rho_2_5": -0.16083916083916083,
+  "complete_draw_raw_vs_pinned_secondary_rho_97_5": 0.11188811188811189,
+  "deterministic_rules": {
+    "first": {"n_regions": 7, "cpg_rho": -0.642857142857143, "cpg_positive_one_sided_permutation_p": 0.9450681098637803, "raw_vs_pinned_secondary_rho": 0.0},
+    "fractional": {"n_regions": 12, "cpg_rho": -0.4265734265734266, "cpg_positive_one_sided_permutation_p": 0.9191561616876767, "raw_vs_pinned_secondary_rho": 0.027972027972027972},
+    "last": {"n_regions": 12, "cpg_rho": -0.4895104895104896, "cpg_positive_one_sided_permutation_p": 0.9479841040317919, "raw_vs_pinned_secondary_rho": -0.055944055944055944}
+  },
+  "workflow_run": 38319687734,
+  "artifact_id": 11778460523,
+  "artifact_digest": "sha256:b8f6f49e6e9f900b579bfbf48a8454798317b7a68d5ad1a50b014296bf2d5d5d",
+  "interpretation": "The raw coordinate-level outcome is highly sensitive to coordinate-to-region assignment, but the failed CPG prediction is not rescued: across complete 12-region admissible mapping draws the CPG rank association remains negative."
+}
