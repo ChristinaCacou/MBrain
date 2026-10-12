@@ -32,3 +32,4 @@ jobs:
           name: chen-direct-final-forced
           path: analysis/chen_direct_final/*
           retention-days: 90
+# trigger finalized aggregation after all 59 raw-session artifacts were present
