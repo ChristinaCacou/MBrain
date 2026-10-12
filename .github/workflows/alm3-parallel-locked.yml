@@ -1,0 +1,68 @@
+name: alm3 parallel frozen replication
+on:
+  push:
+    branches: [alm3-frozen-replication-20261011]
+    paths:
+      - '.github/workflows/alm3-parallel-locked.yml'
+  workflow_dispatch:
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - id: m
+        shell: bash
+        run: |
+          MATRIX=$(python alm3_replication/prepare_matrix.py)
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+  session:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        item: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy h5py requests
+      - env:
+          ASSET_PATH: ${{ matrix.item.path }}
+          ASSET_URL: ${{ matrix.item.url }}
+        run: python alm3_replication/run_locked_session.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-session-${{ strategy.job-index }}
+          path: analysis/alm3_session/*.json
+          retention-days: 90
+  aggregate:
+    needs: session
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alm3-session-*
+          path: all-session-results
+      - run: pip install numpy scipy
+      - run: python alm3_replication/aggregate_parallel.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-parallel-final
+          path: analysis/alm3_parallel/*
+          retention-days: 90
