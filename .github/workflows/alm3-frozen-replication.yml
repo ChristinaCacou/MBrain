@@ -1,0 +1,72 @@
+name: Frozen alm-3 external replication
+on:
+  push:
+    branches: [raw-chen-alm3-replication-20261012]
+    paths:
+      - '.github/workflows/alm3-frozen-replication.yml'
+  workflow_dispatch:
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        shell: bash
+        run: |
+          aws s3 ls --no-sign-request --recursive s3://crcnsarchive/alm-3/live/data/data_structure_files/ > listing.txt
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          keys=[]
+          for line in open('listing.txt'):
+              p=line.split(maxsplit=3)
+              if len(p)==4 and p[3].endswith('.mat') and 'data_structure_' in p[3]: keys.append({'key':p[3]})
+          print('matrix='+json.dumps(keys,separators=(',',':')))
+          print('count',len(keys))
+          PY
+  session:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        item: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy mat73 h5py
+      - env:
+          S3_KEY: ${{ matrix.item.key }}
+        run: |
+          aws s3 cp --no-sign-request "s3://crcnsarchive/${S3_KEY}" session.mat
+          LOCAL_FILE=session.mat python raw_replication/analyze_alm3_session.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-session-${{ strategy.job-index }}
+          path: analysis/alm3_sessions/*.json
+          retention-days: 90
+  aggregate:
+    needs: session
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alm3-session-*
+          path: all-session-results
+      - run: pip install numpy scipy
+      - run: python raw_replication/aggregate_alm3.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-frozen-final
+          path: analysis/alm3_final/*
+          retention-days: 90
