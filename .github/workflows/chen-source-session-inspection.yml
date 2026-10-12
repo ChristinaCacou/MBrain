@@ -1,0 +1,21 @@
+name: Chen source standard-session inspection
+on:
+  push:
+    branches: [raw-chen-alm3-replication-20261012]
+    paths:
+      - '.github/workflows/chen-source-session-inspection.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python raw_replication/extract_chen_source_sessions.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-source-session-inspection
+          path: analysis/chen_source_session_inspection/*
+          retention-days: 90
