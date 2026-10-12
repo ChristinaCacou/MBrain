@@ -1,9 +1,9 @@
 from pathlib import Path
-import json, urllib.request, scipy.io, h5py, os, sys
+import json, urllib.request, scipy.io, h5py
 OUT=Path('analysis/chen_raw_schema'); OUT.mkdir(parents=True,exist_ok=True)
 record=json.load(urllib.request.urlopen('https://zenodo.org/api/records/6713616'))
 files={f['key']:f for f in record['files']}
-want_base='BAYLORGC86_2019_07_31'
+want_base='BAYLORGC95_2019_12_19'
 report={'record_file_count':len(files),'matches':[k for k in files if want_base in k]}
 for prefix in ['data_structure_','meta_data_']:
     key=prefix+want_base+'.mat'
