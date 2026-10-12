@@ -1,0 +1,21 @@
+name: Ghaderi archive inspect
+on:
+  push:
+    branches: [ghaderi-matched-validation-20261011]
+    paths:
+      - 'ghaderi_validation/**'
+      - '.github/workflows/ghaderi-archive-inspect.yml'
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install remotezip requests
+      - run: python ghaderi_validation/inspect_remote_zip.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghaderi-manifest
+          path: ghaderi_manifest.json
