@@ -8,7 +8,8 @@ from pathlib import Path
 from itertools import permutations
 import json, requests, h5py, numpy as np, pandas as pd
 from remfile import File as RemFile
-from scipy.stats import rankdata, spearmanr, roc_auc_score
+from scipy.stats import rankdata, spearmanr
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression, LinearRegression
