@@ -1,0 +1,8 @@
+{
+  "frozen_before_alm3_numerical_outcome_extraction": true,
+  "date": "2026-10-12",
+  "analysis_lock_commit": "698515d08cceaf82f959f53df3c2a713adc81fe4",
+  "session_analyzer_commit": "7c20965ba32632ea01ce6def880bce7420ced4a5",
+  "aggregator_commit": "d4cbc599844605166e49320b71d9fc68113ccea2",
+  "note": "The public alm-3 file inventory was inspected to establish file locations and schema availability. No alm-3 session-level numerical predictor/recovery outputs were computed before these analysis definitions were frozen. The qualitative Li et al. 2016 result is publicly known, so this is a frozen numerical replication rather than an outcome-blind preregistration."
+}
