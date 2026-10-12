@@ -1,0 +1,40 @@
+{
+  "status": "FROZEN_BEFORE_PERTURBATION_EFFECT_REVEAL",
+  "date_utc": "2026-10-12",
+  "dataset": "DANDI:000011, Li et al. 2016 ALM electrophysiology + optogenetic perturbation",
+  "scope": "All public behavior+ecephys+ogen NWB sessions in DANDI:000011 satisfying the locked eligibility criteria. Publication-level qualitative effects are known, but no session- or mouse-level perturbation-effect statistic from this analysis was inspected before this lock.",
+  "independent_unit": "mouse/subject",
+  "session_eligibility": {
+    "recording": "electrode location contains ALM and at least 10 units with quality == good",
+    "control_trials": "at least 10 no-early-lick, hit, no-photostim trials for each left/right instruction with a valid go cue",
+    "perturbation_trials": "at least 10 non-early-lick left/right instruction trials whose same-session laser epoch overlaps the locked late-delay window [go-0.6 s, go-0.1 s] by at least 0.25 s",
+    "site_alignment": "photostimulation site must match the recorded ALM hemisphere when hemisphere can be determined from metadata"
+  },
+  "observational_predictor": {
+    "name": "late-delay local choice discriminability",
+    "data_used": "control trials only",
+    "window": "[go-0.6 s, go-0.1 s]",
+    "trial_filter": "no early lick, outcome == hit, instruction left/right, no photostimulation",
+    "per_unit_metric": "2*abs(AUC(left-vs-right spike count)-0.5)",
+    "session_metric": "mean per-unit metric across good ALM units",
+    "mouse_metric": "unweighted mean across eligible sessions"
+  },
+  "causal_outcome": {
+    "name": "matched late-delay photoinhibition behavioral impairment",
+    "definition": "For each instruction separately, control hit rate minus matched photostimulation hit rate among no-early-lick performing trials; session outcome is the equal-weighted mean of available left/right instruction impairments.",
+    "mouse_metric": "unweighted mean across eligible sessions",
+    "direction": "larger positive values mean greater behavioral impairment"
+  },
+  "primary_hypothesis": "Mice with stronger control-trial late-delay local ALM choice discriminability will show larger matched late-delay ALM photoinhibition impairment.",
+  "primary_statistic": "Spearman rank correlation across mice",
+  "primary_test": "one-sided random permutation test of positive association, 500000 permutations, seed 20261012",
+  "success_criterion": "rho > 0, one-sided permutation P < 0.05, and leave-one-mouse-out linear-prediction R2 > 0",
+  "secondary_outputs": [
+    "95% mouse bootstrap interval for Spearman rho",
+    "leave-one-mouse-out prediction rho and R2",
+    "session-level descriptive Spearman correlation (not inferential because sessions repeat mice)",
+    "association adjusted descriptively for median laser power if power is recoverable"
+  ],
+  "no_tuning_rule": "After the first perturbation-effect computation, no changes to predictor window, unit threshold, trial filters, overlap threshold, aggregation, hypothesis direction, or primary endpoint may be promoted to the locked primary analysis. Any subsequent analyses are post-reveal sensitivity analyses.",
+  "schema_only_prelock_inspection": "Before freezing, only NWB structure and stimulation-design metadata were inspected; the workflow did not compute control-vs-photostim behavioral effect sizes."
+}
