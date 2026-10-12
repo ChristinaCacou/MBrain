@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install numpy scipy remotezip
+      - run: pip install numpy scipy remotezip mat73 h5py
       - env:
           ARCHIVE_INDEX: ${{ matrix.item.archive }}
           MEMBER: ${{ matrix.item.member }}
