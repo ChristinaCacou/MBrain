@@ -1,0 +1,48 @@
+name: Ghaderi NWB schema inspect
+on:
+  push:
+    branches: [ghaderi-matched-validation-20261011]
+    paths: ['.github/workflows/ghaderi-nwb-schema.yml']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install remotezip h5py
+      - name: Inspect one ephys and one opto NWB
+        run: |
+          python - <<'PY'
+          from remotezip import RemoteZip
+          import shutil,h5py,json,os
+          url='https://zenodo.org/records/17973874/files/2026_Ghaderi_NCOMMS_Zenodo_data_code.zip?download=1'
+          members=['data_electrophysiology/sub-PG019_ses-20200904T224847-processed-behavior.nwb','data_optogenetics/sub-PG021_ses-20200913T000000-opto-behavior.nwb']
+          out={}
+          with RemoteZip(url) as rz:
+            for m in members:
+              local='/tmp/'+m.split('/')[-1]
+              with rz.open(m) as src, open(local,'wb') as dst: shutil.copyfileobj(src,dst,8<<20)
+              rec=[]
+              with h5py.File(local,'r') as f:
+                def visitor(name,obj):
+                  if len(rec)>=500:return
+                  if isinstance(obj,h5py.Dataset):
+                    item={'path':'/'+name,'shape':obj.shape,'dtype':str(obj.dtype)}
+                    if obj.size<=30:
+                      try:item['value']=obj[()].tolist() if hasattr(obj[()],'tolist') else str(obj[()])
+                      except:pass
+                    rec.append(item)
+                f.visititems(visitor)
+              out[m]=rec
+              os.remove(local)
+          open('ghaderi_nwb_schema.json','w').write(json.dumps(out,indent=2,default=str))
+          print(json.dumps(out,indent=2,default=str))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghaderi-nwb-schema
+          path: ghaderi_nwb_schema.json
+# trigger
