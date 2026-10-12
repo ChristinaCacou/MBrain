@@ -1,0 +1,23 @@
+name: Chen 2024 sample locked analysis
+on:
+  push:
+    branches: [external-replication-chen2024-20261012]
+    paths:
+      - 'external_replication/analyze_chen2024_session.py'
+      - '.github/workflows/chen2024-sample-analysis.yml'
+  workflow_dispatch:
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ASSET_ID: 0eab806c-c5c3-4d01-bd7c-15e328a7e923
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet h5py numpy scipy
+      - run: python external_replication/analyze_chen2024_session.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen2024-sample-analysis
+          path: analysis/chen2024_sessions/
+          retention-days: 90
