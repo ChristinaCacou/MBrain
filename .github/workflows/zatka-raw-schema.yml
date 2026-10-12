@@ -1,0 +1,21 @@
+name: Zatka raw mat schema
+on:
+  push:
+    branches: [zatka-primary-spatial-chen-contrast-20261012]
+    paths: ['zatka_primary/inspect_raw_mat.py','.github/workflows/zatka-raw-schema.yml']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests h5py numpy scipy
+      - run: python zatka_primary/inspect_raw_mat.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-raw-schema
+          path: analysis/zatka_primary/raw_schema
+          retention-days: 90
