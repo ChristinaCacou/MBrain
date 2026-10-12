@@ -1,0 +1,24 @@
+name: Spatial and Chen specificity audit
+on:
+  push:
+    branches: [zatka-primary-spatial-chen-contrast-20261012]
+    paths: ['zatka_primary/spatial_sensitivity.py','chen_specificity/paired_contrasts.py','analysis_inputs/chen_mouse_rows.csv','.github/workflows/spatial-chen-audit.yml']
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install numpy pandas scipy scikit-learn
+      - run: python zatka_primary/spatial_sensitivity.py
+      - run: python chen_specificity/paired_contrasts.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spatial-chen-audit
+          path: |
+            analysis/zatka_spatial/*
+            analysis/chen_specificity/*
+          retention-days: 90
