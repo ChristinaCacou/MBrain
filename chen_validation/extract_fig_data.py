@@ -43,7 +43,6 @@ def walk(obj,path='root',acc=None):
                     val=getattr(props,key)
                     try: nv=native(val)
                     except: continue
-                    # only keep useful nonempty values
                     if nv not in (None,[],""):
                         rec[key]=nv
         if len(rec)>1: acc.append(rec)
@@ -55,7 +54,7 @@ def walk(obj,path='root',acc=None):
             for i,v in enumerate(obj.ravel()): walk(v,f'{path}[{i}]',acc)
     return acc
 
-figs=['Figure4G_I.fig','FigureS4CF.fig','Figure1H.fig','Figure3.fig','Figure2E.fig']
+figs=['Figure4G_I.fig','FigureS4CF.fig','FigureS5A_E.fig','Figure1H.fig','Figure3.fig','Figure2E.fig']
 summary={}
 for name in figs:
     matches=list(root.rglob(name))
