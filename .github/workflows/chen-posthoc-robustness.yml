@@ -1,0 +1,30 @@
+name: Chen post hoc robustness
+on:
+  workflow_dispatch:
+  push:
+    branches: [raw-chen-alm3-replication-20261012]
+    paths: ['.github/workflows/chen-posthoc-robustness.yml']
+permissions:
+  actions: read
+  contents: read
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Download locked raw Chen aggregate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p chen-final
+          gh run download 38278814249 -n chen-direct-final-forced -D chen-final
+          find chen-final -maxdepth 1 -type f -print
+      - run: pip install numpy scipy pandas
+      - run: python raw_replication/chen_posthoc_robustness.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-posthoc-robustness
+          path: analysis/chen_posthoc_robustness/*
+          retention-days: 90
