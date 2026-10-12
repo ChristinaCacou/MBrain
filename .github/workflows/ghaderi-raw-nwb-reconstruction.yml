@@ -1,0 +1,75 @@
+name: Ghaderi raw NWB reconstruction
+on:
+  push:
+    branches: [ghaderi-matched-validation-20261011]
+    paths: ['.github/workflows/ghaderi-raw-nwb-reconstruction.yml']
+  workflow_dispatch:
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs: {matrix: '${{ steps.m.outputs.matrix }}'}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install remotezip
+      - id: m
+        shell: bash
+        run: |
+          MATRIX=$(python ghaderi_raw/prepare_matrix.py)
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+  ephys:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: {item: '${{ fromJson(needs.prepare.outputs.matrix) }}'}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install numpy scipy h5py remotezip scikit-learn
+      - env: {MEMBER: '${{ matrix.item.member }}'}
+        run: python ghaderi_raw/analyze_ephys_session.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghaderi-ephys-${{ strategy.job-index }}
+          path: analysis/ghaderi_raw_ephys/*.json
+          retention-days: 90
+  opto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install numpy h5py remotezip
+      - run: python ghaderi_raw/analyze_opto_raw.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghaderi-opto-raw
+          path: analysis/ghaderi_raw_opto/*
+          retention-days: 90
+  aggregate:
+    needs: [ephys,opto]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/download-artifact@v4
+        with: {pattern: 'ghaderi-ephys-*', path: all-ghaderi-ephys}
+      - uses: actions/download-artifact@v4
+        with: {name: ghaderi-opto-raw, path: opto-artifact}
+      - run: pip install numpy scipy pandas
+      - run: python ghaderi_raw/aggregate_raw.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghaderi-raw-final
+          path: analysis/ghaderi_raw_final/*
+          retention-days: 90
+# trigger
