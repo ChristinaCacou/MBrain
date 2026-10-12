@@ -1,0 +1,27 @@
+name: Chen raw source inspection
+on:
+  push:
+    branches: [chen-matched-validation-20261011]
+    paths:
+      - 'chen_validation/inspect_raw_source.py'
+      - '.github/workflows/chen-raw-source-inspection.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python chen_validation/inspect_raw_source.py | tee chen_validation/raw_source/log.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-raw-source-inspection
+          path: |
+            chen_validation/raw_source/source_hits.json
+            chen_validation/raw_source/candidate_files.json
+            chen_validation/raw_source/meta_animal_info.m
+            chen_validation/raw_source/log.txt
+          retention-days: 90
