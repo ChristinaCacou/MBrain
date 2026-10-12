@@ -1,0 +1,37 @@
+{
+  "status": "post-publication analysis specification; not preregistered and not outcome-blinded",
+  "dataset": {
+    "citation": "Pinto, Tank & Brody, eLife 2022, Multiple timescales of sensory-evidence accumulation across the dorsal cortex",
+    "doi": "10.7554/eLife.70263",
+    "recording_source": "Figure 4 source data",
+    "perturbation_source": "Figure 2 source data",
+    "regions": ["V1", "mV2", "PPC", "RSC", "mM2", "aM2", "M1"]
+  },
+  "primary_predictor": "median regional autoregressive exponential decay time constant expFit_tau_median (seconds)",
+  "primary_outcome": {
+    "name": "causal_memory_horizon_s",
+    "definition": "For the first finite time-axis segment before the first NaN separator (pre-laser evidence lags), let w_j=max(0,-beta_j), where beta_j is the published normalized laser-minus-control evidence-weight coefficient. The causal memory horizon is sum(w_j*abs(t_j))/sum(w_j). If all w_j are zero the region is undefined and excluded.",
+    "rationale": "A transient perturbation that erases older evidence has a longer causal temporal horizon than one whose deficit is concentrated on recent evidence."
+  },
+  "primary_test": {
+    "statistic": "Spearman rank correlation across the seven single cortical areas",
+    "alternative": "positive",
+    "p_value": "exact enumeration over all 7! permutations of the causal outcome labels",
+    "success": "rho > 0 and one-sided exact permutation p < 0.05"
+  },
+  "secondary_outcomes": [
+    "prelaser_deficit_auc = sum(max(0,-beta_j))*median_pre_lag_spacing",
+    "oldest_FDR_significant_pre_laser_lag_s from coefficient_FDR_isSig",
+    "immediate_during_laser_deficit = max(0,-beta_during)"
+  ],
+  "sensitivity": [
+    "leave-one-region-out Spearman correlation for the primary association",
+    "bootstrap 95% interval over regions, seed 20261011, 50000 replicates"
+  ],
+  "interpretation_guardrails": [
+    "This is an external replication/stress test, not a blinded confirmatory experiment.",
+    "It tests whether a task-aligned temporal property of neural activity tracks a task-aligned temporal property of perturbation effects.",
+    "It does not validate PUI and does not overturn the failed 12-region PUI test.",
+    "The imaging and perturbation cohorts are analyzed at matched task/region level; same-animal matching must not be claimed unless verified from source metadata."
+  ]
+}
