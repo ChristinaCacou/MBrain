@@ -1,0 +1,21 @@
+name: Chen 2024 NWB schema
+on:
+  push:
+    branches: [external-replication-chen2024-20261012]
+    paths:
+      - 'external_replication/chen2024_schema.py'
+      - '.github/workflows/chen2024-schema.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect three smallest NWB files
+        run: python external_replication/chen2024_schema.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen2024-schema
+          path: analysis/chen2024_schema/schema.json
+          retention-days: 90
