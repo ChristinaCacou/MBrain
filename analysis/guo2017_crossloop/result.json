@@ -1,0 +1,22 @@
+{
+  "analysis_status": "FROZEN_NUMERICAL_GUO2017_CROSSLOOP_TEST",
+  "lock_commit": "561215ed975cff693af2e93795d81dbbeae7aafc",
+  "dataset": "DANDI 000009 version 0.220126.1903",
+  "n_eligible_sessions": 78,
+  "n_eligible_mice": 14,
+  "mice_by_recording_region": {"ALM": 7, "Thalamus": 7},
+  "primary": {
+    "pooled_within_stratum_rank_association": -0.1785714285714286,
+    "one_sided_permutation_p": 0.7339365321269358,
+    "stratified_bootstrap95": [-0.7333333333333333, 0.5428571428571429],
+    "success": false,
+    "spearman_rho": -0.059340659340659345,
+    "r2_vs_fold_stratum_mean": -0.04812227984225004
+  },
+  "secondary_by_recording_region": {
+    "ALM": {"n_mice": 7, "rho": -0.5, "exact_one_sided_p": 0.8821428571428571},
+    "Thalamus": {"n_mice": 7, "rho": 0.14285714285714288, "exact_one_sided_p": 0.39126984126984127}
+  },
+  "temporal_control": {"early_window_pooled_association": 0.3928571428571429, "late_minus_early": -0.5714285714285715},
+  "interpretation": "Frozen numerical source-data test. The publication qualitative conclusions were public, so this is not a blinded preregistration."
+}
