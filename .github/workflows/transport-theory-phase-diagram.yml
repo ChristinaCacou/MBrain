@@ -1,0 +1,19 @@
+name: Transportability theorem phase diagram
+on:
+  push:
+    branches: [transport-theorem-guo-20261012]
+    paths:
+      - 'transport_theory/**'
+      - '.github/workflows/transport-theory-phase-diagram.yml'
+  workflow_dispatch:
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet numpy pandas scipy
+      - run: python transport_theory/transportability_phase_diagram.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: transport-theory-phase-diagram
+          path: analysis/transport_theory/
