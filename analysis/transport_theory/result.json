@@ -1,0 +1,10 @@
+{
+  "seed": 20261012,
+  "n_targets_per_rep": 80,
+  "n_repetitions_per_cell": 1000,
+  "sigma_eps2": 1.0,
+  "measurement_noise_relative_sd": 0.1,
+  "perfect_invariance_sanity_min_spearman": 1.0,
+  "perfect_invariance_sanity_max_spearman": 1.0,
+  "interpretation": "Illustrative, not inferential: rank transport is exact under the theorem's invariances and degrades as feature/circuit alignment falls or intervention strength varies across targets."
+}
