@@ -1,0 +1,53 @@
+name: Definitive corrected alm-3 aggregate
+on:
+  push:
+    branches: [raw-chen-alm3-replication-20261012]
+    paths:
+      - '.github/workflows/alm3-corrected-definitive-aggregate.yml'
+  workflow_dispatch:
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for frozen session run to complete
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 360); do
+            STATUS=$(gh api repos/${{ github.repository }}/actions/runs/38270810093 --jq '.status')
+            CONCLUSION=$(gh api repos/${{ github.repository }}/actions/runs/38270810093 --jq '.conclusion // ""')
+            echo "source run status=$STATUS conclusion=$CONCLUSION"
+            if [ "$STATUS" = "completed" ]; then
+              if [ "$CONCLUSION" != "success" ]; then
+                echo "Source frozen session run did not complete successfully" >&2
+                exit 1
+              fi
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for source run" >&2
+          exit 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 38270810093
+          pattern: alm3-session-*
+          path: all-session-results
+      - run: pip install numpy scipy
+      - run: python raw_replication/aggregate_alm3.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-definitive-corrected-final
+          path: analysis/alm3_final/*
+          retention-days: 90
