@@ -1,0 +1,35 @@
+name: Falconer OSF preprocessed file inspection
+
+on:
+  push:
+    branches: [falconer-osf-reanalysis]
+    paths:
+      - '.github/workflows/falconer-osf-inspect.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download representative public files
+        run: |
+          mkdir -p analysis/falconer_osf/inspect
+          curl -L --fail --retry 3 https://osf.io/download/d23b4/ -o analysis/falconer_osf/inspect/BOLD_time_series_P01.csv
+          curl -L --fail --retry 3 https://osf.io/download/y93tq/ -o analysis/falconer_osf/inspect/FC_P01.csv
+          curl -L --fail --retry 3 https://osf.io/download/8snur/ -o analysis/falconer_osf/inspect/README_preprocessed.txt
+          curl -L --fail --retry 3 https://osf.io/download/ycx5v/ -o analysis/falconer_osf/inspect/README_raw.txt
+          echo '=== BOLD head ==='; head -5 analysis/falconer_osf/inspect/BOLD_time_series_P01.csv
+          echo '=== FC head ==='; head -5 analysis/falconer_osf/inspect/FC_P01.csv
+          echo '=== README preprocessed ==='; cat analysis/falconer_osf/inspect/README_preprocessed.txt
+          echo '=== README raw ==='; cat analysis/falconer_osf/inspect/README_raw.txt
+      - name: Upload representative files
+        uses: actions/upload-artifact@v4
+        with:
+          name: falconer-wcuj8-inspect
+          path: analysis/falconer_osf/inspect
+          retention-days: 14
