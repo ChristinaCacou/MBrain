@@ -14,15 +14,15 @@ jobs:
       - id: m
         shell: bash
         run: |
-          aws s3 ls --no-sign-request --recursive s3://crcnsarchive/alm-3/live/data/data_structure_files/ > listing.txt
+          aws s3 ls --no-sign-request --recursive s3://crcnsarchive/ > listing.txt
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
           keys=[]
           for line in open('listing.txt'):
               p=line.split(maxsplit=3)
-              if len(p)==4 and p[3].endswith('.mat') and 'data_structure_' in p[3]: keys.append({'key':p[3]})
+              if len(p)==4 and p[3].startswith('alm-3/live/data/data_structure_files/data_structure_') and p[3].endswith('.mat'):
+                  keys.append({'key':p[3]})
           print('matrix='+json.dumps(keys,separators=(',',':')))
-          print('count',len(keys))
           PY
   session:
     needs: prepare
