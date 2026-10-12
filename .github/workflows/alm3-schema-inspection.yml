@@ -1,0 +1,24 @@
+name: alm3 outcome-blind schema inspection
+on:
+  push:
+    branches: [alm3-frozen-replication-20261011]
+    paths:
+      - 'alm3_replication/schema_inspect.py'
+      - '.github/workflows/alm3-schema-inspection.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install h5py
+      - run: python alm3_replication/schema_inspect.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alm3-schema-inspection
+          path: analysis/alm3_schema/schema.json
+          retention-days: 90
