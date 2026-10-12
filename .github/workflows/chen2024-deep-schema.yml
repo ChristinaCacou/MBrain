@@ -1,0 +1,21 @@
+name: Chen 2024 deep NWB schema
+on:
+  push:
+    branches: [external-replication-chen2024-20261012]
+    paths:
+      - 'external_replication/chen2024_deep_schema.py'
+      - '.github/workflows/chen2024-deep-schema.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet h5py numpy
+      - run: python external_replication/chen2024_deep_schema.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen2024-deep-schema
+          path: analysis/chen2024_deep_schema/deep_schema.json
+          retention-days: 90
