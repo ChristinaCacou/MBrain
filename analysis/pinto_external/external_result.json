@@ -1,0 +1,107 @@
+{
+  "analysis_status": "external post-publication replication/stress test; specification locked before statistic calculation but source study and qualitative hypothesis were public",
+  "bootstrap_95_ci": [
+    -0.6078431372549019,
+    0.970142500145332
+  ],
+  "dataset_doi": "10.7554/eLife.70263",
+  "exact_one_sided_permutation_p": 0.18571428571428572,
+  "guardrail": "This result does not validate PUI. It tests alignment between an observational temporal-timescale feature and the temporal horizon of an independent perturbation effect in a different task/lab.",
+  "leave_one_region_out_max": 0.7589709258986453,
+  "leave_one_region_out_median": 0.3768511731740915,
+  "leave_one_region_out_min": 0.17393131069573453,
+  "leave_one_region_out_rho": [
+    0.3768511731740915,
+    0.3768511731740915,
+    0.17393131069573453,
+    0.39466488146729556,
+    0.2125118592516207,
+    0.7589709258986453,
+    0.5161002296110788
+  ],
+  "n_exact_permutations": 5040,
+  "n_regions": 7,
+  "permutations_ge_observed": 936,
+  "perturbation_labels": [
+    "V1",
+    "mV2",
+    "PPC",
+    "RSC",
+    "Post",
+    "mM2",
+    "aM2",
+    "M1",
+    "Front"
+  ],
+  "primary_outcome": "causal_memory_horizon_s",
+  "primary_predictor": "tau_median_s",
+  "primary_spearman_rho": 0.40768712416360564,
+  "recording_field_paths": {
+    "area": "root/expfit_areaList",
+    "tau": "root/expFit_tau_median",
+    "tau_bymouse": "root/expFit_tau_bymouse"
+  },
+  "regions": [
+    "V1",
+    "mV2",
+    "PPC",
+    "RSC",
+    "mM2",
+    "aM2",
+    "M1"
+  ],
+  "secondary_correlations": {
+    "immediate_during_laser_deficit": {
+      "spearman_rho": -0.5559369874958259
+    },
+    "mean_postlaser_deficit": {
+      "spearman_rho": 0.5929994533288809
+    },
+    "oldest_FDR_significant_pre_laser_lag_s": {
+      "spearman_rho": 0.647150228929434
+    },
+    "prelaser_deficit_auc": {
+      "spearman_rho": 0.2594372608313854
+    }
+  },
+  "segment_indices": {
+    "during": [
+      4
+    ],
+    "post": [
+      6,
+      7
+    ],
+    "pre": [
+      0,
+      1,
+      2
+    ]
+  },
+  "source_hashes": {
+    "fig2": {
+      "mat_file": "fig2_sourceData.mat",
+      "mat_sha256": "7f6d1dbf11e0c7afe87fe37a2be8ce2b72c71eaea179d4df20aa758f9273e021",
+      "url": "https://cdn.elifesciences.org/articles/70263/elife-70263-fig2-data1-v1.zip",
+      "zip_sha256": "2eb25c0fd9d9e5ab239d7c9299c2db3fbd4d4e5f016a8e5e5ee4d69669f5d57d"
+    },
+    "fig4": {
+      "mat_file": "fig4_sourceData.mat",
+      "mat_sha256": "412d029a8f67d4551a202bf80cedd7096173e102bdd834bf7712c4991da592e9",
+      "url": "https://cdn.elifesciences.org/articles/70263/elife-70263-fig4-data1-v1.zip",
+      "zip_sha256": "6d965afec886bb61585774c1ea8d88a21758fb74a7b600766da11969a258c728"
+    }
+  },
+  "success": false,
+  "success_criterion": "rho > 0 and exact one-sided permutation p < 0.05",
+  "time_axis_s": [
+    -1.25,
+    -0.75,
+    -0.25,
+    null,
+    -0.25,
+    null,
+    0.25,
+    0.75
+  ]
+}
