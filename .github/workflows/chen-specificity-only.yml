@@ -1,0 +1,21 @@
+name: Chen paired specificity only
+on:
+  push:
+    branches: [zatka-primary-spatial-chen-contrast-20261012]
+    paths: ['.github/workflows/chen-specificity-only.yml']
+  workflow_dispatch:
+jobs:
+  chen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install numpy pandas scipy
+      - run: python chen_specificity/paired_contrasts.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-specificity-final
+          path: analysis/chen_specificity/*
+          retention-days: 90
