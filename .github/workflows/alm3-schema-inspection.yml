@@ -1,14 +1,33 @@
-name: ALM3 frozen replication schema inspection
+name: ALM3 frozen external replication
 on:
   push:
     branches: [alm3-frozen-replication-20261012]
     paths:
       - '.github/workflows/alm3-schema-inspection.yml'
-      - 'alm3_replication/inspect_one.py'
-      - 'alm3_replication/inspect_one_deep.py'
+      - 'alm3_replication/analyze_session.py'
+      - 'alm3_replication/prepare_matrix.py'
+      - 'alm3_replication/aggregate.py'
   workflow_dispatch:
 jobs:
-  inspect:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install dandi
+      - id: matrix
+        shell: bash
+        run: echo "matrix=$(python alm3_replication/prepare_matrix.py)" >> "$GITHUB_OUTPUT"
+  analyze:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -16,10 +35,42 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install dandi pynwb requests pandas h5py numpy
-      - run: python alm3_replication/inspect_one_deep.py
+      - run: pip install dandi pynwb requests pandas h5py numpy scipy
+      - name: Analyze frozen session
+        continue-on-error: true
+        env:
+          ASSET: ${{ matrix.asset }}
+          SID: ${{ matrix.id }}
+        shell: bash
+        run: |
+          mkdir -p analysis/alm3_sessions
+          python alm3_replication/analyze_session.py --asset "$ASSET" --out "analysis/alm3_sessions/${SID}.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alm3-session-${{ matrix.id }}
+          path: analysis/alm3_sessions/*.json
+          if-no-files-found: ignore
+          retention-days: 90
+  aggregate:
+    needs: [prepare, analyze]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alm3-session-*
+          path: downloaded-results
+          merge-multiple: false
+      - run: python alm3_replication/aggregate.py
       - uses: actions/upload-artifact@v4
         with:
-          name: alm3-deep-schema
-          path: analysis/alm3_deep_schema/deep_schema.json
+          name: alm3-frozen-replication-final
+          path: analysis/alm3_replication/
           retention-days: 90
