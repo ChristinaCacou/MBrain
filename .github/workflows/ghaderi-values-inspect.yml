@@ -1,0 +1,63 @@
+name: Ghaderi raw value inspect
+on:
+  push:
+    branches: [ghaderi-matched-validation-20261011]
+    paths: ['.github/workflows/ghaderi-values-inspect.yml']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install remotezip h5py scipy
+      - name: Inspect strings and area map
+        run: |
+          python - <<'PY'
+          from remotezip import RemoteZip
+          import shutil,h5py,json,os,numpy as np
+          from scipy.io import loadmat
+          url='https://zenodo.org/records/17973874/files/2026_Ghaderi_NCOMMS_Zenodo_data_code.zip?download=1'
+          e='data_electrophysiology/sub-PG019_ses-20200904T224847-processed-behavior.nwb'
+          helper='data_helpers/Area_list.mat'
+          with RemoteZip(url) as rz:
+            for m,local in [(e,'/tmp/e.nwb'),(helper,'/tmp/a.mat')]:
+              with rz.open(m) as src, open(local,'wb') as dst: shutil.copyfileobj(src,dst,8<<20)
+          def vals(ds):
+            a=ds[()]
+            if getattr(a,'dtype',None) is not None and a.dtype.kind in 'SO':
+              out=[]
+              for z in np.ravel(a):
+                if isinstance(z,bytes): out.append(z.decode(errors='replace'))
+                elif isinstance(z,str): out.append(z)
+                elif isinstance(z,h5py.Reference):
+                  try:
+                    v=ds.file[z][()]
+                    if isinstance(v,bytes):out.append(v.decode(errors='replace'))
+                    elif isinstance(v,np.ndarray) and v.dtype.kind in 'SU':out.append(''.join(x.decode() if isinstance(x,bytes) else str(x) for x in v.ravel()))
+                    else:out.append(str(v))
+                  except Exception as ex:out.append('REFERR:'+repr(ex))
+                else:out.append(str(z))
+              return out
+            return np.ravel(a).tolist()
+          out={}
+          with h5py.File('/tmp/e.nwb','r') as f:
+            for p in ['/units/location','/units/ccf_location','/units/allenccf_area_layer','/intervals/trials/context','/intervals/trials/trial_type']:
+              v=vals(f[p]);out[p]={'first20':v[:20],'unique_first100':sorted(set(map(str,v[:100])))[:100]}
+          d=loadmat('/tmp/a.mat',squeeze_me=True,struct_as_record=False)
+          out['area_keys']=[k for k in d if not k.startswith('__')]
+          for k in out['area_keys']:
+            x=d[k]
+            try:
+              fields=getattr(x,'_fieldnames',None);out['area_'+k]={'type':str(type(x)),'fields':fields}
+              if fields:
+                for fld in fields:
+                  vv=np.atleast_1d(getattr(x,fld)).ravel();out['area_'+k][fld]=[str(z) for z in vv[:50]]
+            except Exception as ex:out['area_'+k]={'error':repr(ex)}
+          open('ghaderi_values.json','w').write(json.dumps(out,indent=2,default=str))
+          print(json.dumps(out,indent=2,default=str))
+          PY
+      - uses: actions/upload-artifact@v4
+        with: {name: ghaderi-values, path: ghaderi_values.json}
+# trigger
