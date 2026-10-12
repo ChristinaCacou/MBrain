@@ -1,0 +1,33 @@
+name: Export Ghaderi raw final
+on:
+  workflow_dispatch:
+  push:
+    branches: [ghaderi-matched-validation-20261011]
+    paths: ['.github/workflows/export-ghaderi-raw-final.yml']
+permissions:
+  actions: read
+  contents: write
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ghaderi-matched-validation-20261011
+      - name: Download final artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf analysis/ghaderi_raw_final_snapshot
+          mkdir -p analysis/ghaderi_raw_final_snapshot
+          gh run download 38285040160 -n ghaderi-raw-final-forced -D analysis/ghaderi_raw_final_snapshot
+          find analysis/ghaderi_raw_final_snapshot -type f -maxdepth 2 -print
+          echo '--- result.json ---'
+          cat analysis/ghaderi_raw_final_snapshot/result.json
+      - name: Commit snapshot
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add analysis/ghaderi_raw_final_snapshot
+          git commit -m 'Archive Ghaderi raw NWB reconstruction results' || exit 0
+          git push origin HEAD:ghaderi-matched-validation-20261011
