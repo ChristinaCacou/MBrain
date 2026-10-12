@@ -1,0 +1,29 @@
+name: Zatka Figshare inventory
+on:
+  push:
+    branches: [submission-final-audit-20261012]
+    paths: ['.github/workflows/zatka-figshare-inventory.yml']
+  workflow_dispatch:
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Figshare metadata
+        run: |
+          python - <<'PY'
+          import json, urllib.request, pathlib
+          url='https://api.figshare.com/v2/articles/13008038'
+          with urllib.request.urlopen(url, timeout=60) as r:
+              d=json.load(r)
+          out={'id':d.get('id'),'title':d.get('title'),'files':d.get('files',[])}
+          pathlib.Path('analysis').mkdir(exist_ok=True)
+          pathlib.Path('analysis/zatka_figshare_inventory.json').write_text(json.dumps(out,indent=2))
+          for f in out['files']:
+              print(f.get('id'), f.get('name'), f.get('size'), f.get('download_url'))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-figshare-inventory
+          path: analysis/zatka_figshare_inventory.json
+          retention-days: 90
