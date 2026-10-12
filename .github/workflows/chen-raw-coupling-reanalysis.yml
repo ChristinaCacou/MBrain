@@ -1,0 +1,68 @@
+name: Raw Chen bilateral coupling reanalysis
+on:
+  push:
+    branches: [raw-chen-alm3-replication-20261012]
+    paths:
+      - '.github/workflows/chen-raw-coupling-reanalysis.yml'
+  workflow_dispatch:
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install remotezip
+      - id: m
+        shell: bash
+        run: |
+          MATRIX=$(python chen_validation/prepare_raw_matrix.py)
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+  session:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        item: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy remotezip mat73 h5py
+      - env:
+          ARCHIVE_INDEX: ${{ matrix.item.archive }}
+          MEMBER: ${{ matrix.item.member }}
+        run: python raw_replication/analyze_chen_coupling_session.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-direct-${{ strategy.job-index }}
+          path: analysis/chen_direct_sessions/*.json
+          retention-days: 90
+  aggregate:
+    needs: session
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: chen-direct-*
+          path: all-session-results
+      - run: pip install numpy scipy
+      - run: python raw_replication/aggregate_chen_direct.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-direct-final
+          path: analysis/chen_direct_final/*
+          retention-days: 90
