@@ -1,0 +1,47 @@
+{
+  "analysis_status": "POST_HOC_RAW_NWB_GHADERI_RECONSTRUCTION",
+  "dataset": "Ghaderi et al. Nature Communications 2026; Zenodo 17973874",
+  "n_ephys_files_parsed": 35,
+  "n_ephys_session_region_epoch_rows": 267,
+  "n_opto_trialtable_rows": 226,
+  "n_region_epoch_cells": 15,
+  "primary_raw_reconstruction_statistic": 0.6666666666666666,
+  "exact_common_region_label_one_sided_p": 0.016666666666666666,
+  "leave_one_region_out": {
+    "A1": {
+      "statistic": 0.6666666666666666,
+      "exact_one_sided_p": 0.08333333333333333
+    },
+    "wS1": {
+      "statistic": 0.8666666666666667,
+      "exact_one_sided_p": 0.041666666666666664
+    },
+    "wS2": {
+      "statistic": 0.8,
+      "exact_one_sided_p": 0.041666666666666664
+    },
+    "wM2": {
+      "statistic": 0.3333333333333333,
+      "exact_one_sided_p": 0.25
+    },
+    "ALM": {
+      "statistic": 0.5333333333333333,
+      "exact_one_sided_p": 0.08333333333333333
+    }
+  },
+  "leave_one_epoch_out": {
+    "audio": {
+      "statistic": 0.65,
+      "exact_one_sided_p": 0.1
+    },
+    "delay": {
+      "statistic": 0.7,
+      "exact_one_sided_p": 0.016666666666666666
+    },
+    "whisker": {
+      "statistic": 0.65,
+      "exact_one_sided_p": 0.016666666666666666
+    }
+  },
+  "method_note": "This is a post hoc raw-NWB reconstruction sensitivity, not a replacement for the prospectively specified processed-data analysis. It uses source task classes and fixed 50-neuron population size but fold-wise standardization and epoch-integrated raw spike counts."
+}
