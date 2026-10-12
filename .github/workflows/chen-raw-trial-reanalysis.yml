@@ -4,6 +4,9 @@ on:
     branches: [chen-matched-validation-20261011]
     paths:
       - '.github/workflows/chen-raw-trial-reanalysis.yml'
+      - 'chen_validation/analyze_raw_session.py'
+      - 'chen_validation/prepare_raw_matrix.py'
+      - 'chen_validation/aggregate_raw_results.py'
   workflow_dispatch:
 jobs:
   prepare:
