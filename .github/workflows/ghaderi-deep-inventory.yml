@@ -1,0 +1,33 @@
+name: Ghaderi deep archive inventory
+on:
+  push:
+    branches: [ghaderi-matched-validation-20261011]
+    paths: ['.github/workflows/ghaderi-deep-inventory.yml']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install remotezip
+      - name: Inventory archive paths
+        run: |
+          python - <<'PY'
+          import json,re
+          from remotezip import RemoteZip
+          url='https://zenodo.org/records/17973874/files/2026_Ghaderi_NCOMMS_Zenodo_data_code.zip?download=1'
+          pats=re.compile(r'(spike|ephys|electro|unit|cluster|session|trial|decod|opto|psth|raw|nwb)',re.I)
+          with RemoteZip(url) as rz:
+              rows=[{'name':z.filename,'size':z.file_size} for z in rz.infolist() if pats.search(z.filename)]
+          rows=sorted(rows,key=lambda x:x['name'])
+          open('ghaderi_deep_inventory.json','w').write(json.dumps(rows,indent=2))
+          print(json.dumps(rows[:1000],indent=2))
+          print('MATCH_COUNT',len(rows),'TOTAL_SIZE',sum(r['size'] for r in rows))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghaderi-deep-inventory
+          path: ghaderi_deep_inventory.json
