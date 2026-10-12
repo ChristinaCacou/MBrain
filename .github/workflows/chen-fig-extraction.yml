@@ -1,0 +1,22 @@
+name: Chen figure extraction
+on:
+  push:
+    branches: [chen-matched-validation-20261011]
+    paths:
+      - 'chen_validation/extract_fig_data.py'
+      - '.github/workflows/chen-fig-extraction.yml'
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy scipy
+      - run: python chen_validation/extract_fig_data.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chen-figure-data
+          path: analysis/chen_fig_data
