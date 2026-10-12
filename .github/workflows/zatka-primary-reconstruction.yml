@@ -1,0 +1,21 @@
+name: Zatka primary reconstruction
+on:
+  push:
+    branches: [zatka-primary-spatial-chen-contrast-20261012]
+    paths: ['zatka_primary/reconstruct_primary_atlas.py','.github/workflows/zatka-primary-reconstruction.yml']
+  workflow_dispatch:
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install numpy pandas scipy h5py requests iblatlas
+      - run: python zatka_primary/reconstruct_primary_atlas.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zatka-primary-reconstruction
+          path: analysis/zatka_primary_reconstruction/*
+          retention-days: 90
