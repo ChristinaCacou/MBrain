@@ -9,7 +9,7 @@ for prefix in ['data_structure_','meta_data_']:
     key=prefix+want_base+'.mat'
     if key not in files:
         report[key]='NOT_FOUND'; continue
-    url=files[key]['links']['content']
+    url='https://zenodo.org/records/6713616/files/'+key+'?download=1'
     dest=Path('chen_validation')/key
     if not dest.exists(): urllib.request.urlretrieve(url,dest)
     report[key]={'size':dest.stat().st_size,'url':url}
