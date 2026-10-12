@@ -1,0 +1,16 @@
+{
+  "analysis_status": "POST_HOC_DESCRIPTIVE_CROSS_STUDY_SYNTHESIS",
+  "endpoint": "right-ALM behavioral recovery versus control-trial bilateral ALM coupling",
+  "pooled_rho": 0.5830820099703425,
+  "pooled_95_ci": [0.22493714500326337, 0.8024264202157317],
+  "approx_one_sided_p": 0.0014250937529198815,
+  "approx_two_sided_p": 0.002850187505839763,
+  "heterogeneity_Q": 0.12622376688155326,
+  "heterogeneity_p": 0.7223799546667835,
+  "I2_percent": 0.0,
+  "studies": [
+    {"study": "Chen et al. 2021 raw reanalysis", "n": 18, "rho": 0.552, "status": "exploratory within-system right-behavior association"},
+    {"study": "Chen et al. 2024 DANDI external test", "n": 8, "rho": 0.6666666666666669, "status": "prespecified secondary right-behavior transport association"}
+  ],
+  "interpretation": "Descriptive Fisher-z synthesis only. The 2024 right-side endpoint was prespecified but secondary, and its two-side Bonferroni-adjusted P value was 0.0832; this pooled calculation is not confirmatory evidence and does not relabel the frozen 2024 primary test as successful."
+}
