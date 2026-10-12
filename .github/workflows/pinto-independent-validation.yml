@@ -1,0 +1,30 @@
+name: Pinto independent validation
+on:
+  push:
+    branches: [pinto-independent-validation-20261011]
+    paths:
+      - 'pinto_validation/**'
+      - '.github/workflows/pinto-independent-validation.yml'
+permissions:
+  contents: write
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pinto-independent-validation-20261011
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy h5py
+      - run: python pinto_validation/extract_pinto_source.py
+      - name: Commit extracted source tables
+        run: |
+          git config user.name pinto-validation-bot
+          git config user.email actions@users.noreply.github.com
+          git add analysis/pinto_external_source
+          if ! git diff --cached --quiet; then
+            git commit -m 'Extract Pinto eLife source data with hashes'
+            git push origin HEAD:pinto-independent-validation-20261011
+          fi
