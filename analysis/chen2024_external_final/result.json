@@ -1,0 +1,33 @@
+{
+  "analysis_status": "FROZEN_EXTERNAL_CHEN2024_BILATERAL_COUPLING_TEST",
+  "dataset": "Chen et al. Cell 2024 / DANDI 000363 v0.230822.0128",
+  "lock": "external_replication/CHEN2024_EXTERNAL_LOCK.md",
+  "n_session_json": 36,
+  "n_subjects_any_session": 11,
+  "primary_endpoint": "side_average_recovery",
+  "primary": {
+    "n_mice": 6,
+    "rho": 0.5428571428571429,
+    "p_one_sided": 0.14888770222459555,
+    "bootstrap95": [-0.6, 1.0],
+    "loo_rho": 0.2571428571428572,
+    "loo_r2": -0.7843259985907549,
+    "loo_mae": 0.0374544850925421,
+    "locked_success": false,
+    "status": "STRUCTURALLY_UNDERPOWERED_OR_INELIGIBLE_UNDER_FROZEN_PRIMARY"
+  },
+  "secondary": {
+    "left_recovery": {"n_mice": 11, "rho": 0.27272727272727276, "p_one_sided": 0.20946758106483787, "bonferroni_two_side_secondary": 0.41893516212967574, "bootstrap95": [-0.45023696682464454, 0.8421052631578947], "loo_rho": -0.1272727272727273, "loo_r2": -0.38379711879634226, "loo_mae": 0.0864125647048482},
+    "right_recovery": {"n_mice": 8, "rho": 0.6666666666666669, "p_one_sided": 0.041601916796166406, "bonferroni_two_side_secondary": 0.08320383359233281, "bootstrap95": [-0.13924050632911392, 0.9259259259259259], "loo_rho": 0.523809523809524, "loo_r2": 0.14621893217320525, "loo_mae": 0.0297109817119557},
+    "left_neuronal": {"n_mice": 11, "rho": 0.6545454545454547, "p_one_sided": 0.017085965828068345, "bootstrap95": [0.1267605633802817, 0.9436619718309859], "loo_rho": 0.3545454545454546, "loo_r2": -0.13637900263710034, "loo_mae": 0.25612586112121466},
+    "right_neuronal": {"n_mice": 8, "rho": 0.5714285714285715, "p_one_sided": 0.07543984912030176, "bootstrap95": [-0.28205128205128205, 0.9230769230769231], "loo_rho": 0.4523809523809524, "loo_r2": -0.04195788809283618, "loo_mae": 0.21584819470964006}
+  },
+  "negative_control_within_choice": {
+    "left_recovery": {"n_mice": 11, "rho": 0.4090909090909091, "p_one_sided": 0.10669378661242677, "loo_rho": -0.07272727272727274, "loo_r2": -0.22784306591976278},
+    "right_recovery": {"n_mice": 8, "rho": 0.5714285714285715, "p_one_sided": 0.07611984776030448, "loo_rho": 0.09523809523809526, "loo_r2": -0.4165883909339414}
+  },
+  "workflow_run": 38319354200,
+  "artifact_id": 11778180910,
+  "artifact_digest": "sha256:0d810102b88046e100c9a195f654d10198a3e583499e25b9d85f0363c3572fd4",
+  "note": "Primary and secondary definitions were frozen before aggregate perturbation-outcome extraction. A single schema-validation session was run after the lock and before aggregate analysis. The frozen primary was structurally underpowered because only six mice had both unilateral sides estimable; the right-side result is a prespecified secondary result and does not constitute a passed primary replication."
+}
