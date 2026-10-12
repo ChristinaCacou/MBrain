@@ -1,0 +1,26 @@
+{
+  "dataset": "Ghaderi, Crochet & Petersen, Nature Communications 2026, DOI 10.1038/s41467-026-73622-y",
+  "data_record": "Zenodo 17973874",
+  "source_archive": "2026_Ghaderi_NCOMMS_Zenodo_data_code.zip",
+  "status": "analysis specification frozen before extraction of numeric processed values; not outcome-blinded to the paper's qualitative conclusions",
+  "common_regions": ["A1", "wS1", "wS2", "wM2", "ALM"],
+  "trial_contrast": "Go-tone + whisker + lick versus Nogo-tone + whisker + no lick, matching the authors' 50-neuron decoder",
+  "decoder_file": "processed_data/Decoding_NbNeurons5_50.mat",
+  "causal_file": "processed_data/Optoinhibition_mat.mat",
+  "decoder_population": "Nb_neurons50",
+  "epochs_seconds_relative_to_auditory_cue": {
+    "audio": [-0.05, 0.30],
+    "delay": [0.40, 0.85],
+    "whisker": [0.95, 1.20]
+  },
+  "causal_outcome": "negative of light-minus-no-light change in lick probability (percentage points) on completed Go-tone + whisker trials; positive values indicate behavioral impairment",
+  "primary_statistic": "within-epoch rank correlation pooled across 15 region-by-epoch cells, with one common region-label permutation applied across all three epochs",
+  "primary_test": "exact one-sided positive randomization test over all 5! = 120 region-label permutations",
+  "secondary": [
+    "epoch-specific Spearman correlations with exact 5! permutation tests",
+    "region-averaged Spearman correlation across five regions",
+    "leave-one-region-out linear prediction with epoch fixed effects",
+    "cluster bootstrap by region"
+  ],
+  "success_criterion": "primary exact one-sided P < 0.05 and positive primary statistic"
+}
