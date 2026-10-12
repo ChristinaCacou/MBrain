@@ -1,6 +1,7 @@
 import hashlib, itertools, json, math, shutil
 from pathlib import Path
 
+import mat73
 import numpy as np
 import pandas as pd
 from remotezip import RemoteZip
@@ -55,7 +56,6 @@ def decoder_metrics(path):
     for region in REGIONS:
         arr=np.asarray(getattr(nb,region),dtype=float)
         if arr.ndim==2:
-            # sessions x time, no repetition dimension
             if arr.shape[1]==len(times): sr=arr
             elif arr.shape[0]==len(times): sr=arr.T
             else: raise RuntimeError((region,'decoder shape',arr.shape))
@@ -66,9 +66,7 @@ def decoder_metrics(path):
             ta=ta[0]
             ra=[i for i,n in enumerate(dims) if n==100 and i!=ta]
             if len(ra)==1: ra=ra[0]
-            else:
-                # repetition is the non-time axis that is not sessionaddress length if detectable
-                ra=[i for i in range(3) if i!=ta][-1]
+            else: ra=[i for i in range(3) if i!=ta][-1]
             sa=[i for i in range(3) if i not in (ta,ra)][0]
             x=np.moveaxis(arr,(sa,ta,ra),(0,1,2))
             sr=np.nanmean(x,axis=2)
@@ -91,35 +89,64 @@ def decoder_metrics(path):
     return sess,reg
 
 
+def unwrap(x):
+    while isinstance(x,(list,tuple)) and len(x)==1: x=x[0]
+    if isinstance(x,np.ndarray) and x.size==1: return unwrap(x.item())
+    return x
+
+
 def to_strings(x):
-    a=np.atleast_1d(x).ravel()
-    out=[]
+    x=unwrap(x)
+    if isinstance(x,str): return np.asarray([x],dtype=object)
+    a=np.atleast_1d(x).ravel(); out=[]
     for z in a:
+        z=unwrap(z)
         if isinstance(z,str): out.append(z)
         elif isinstance(z,bytes): out.append(z.decode())
-        elif isinstance(z,np.ndarray) and z.size==1: out.append(str(z.item()))
+        elif isinstance(z,np.ndarray) and z.dtype.kind in 'US': out.append(''.join(z.astype(str).ravel().tolist()))
         else: out.append(str(z))
     return np.asarray(out,dtype=object)
 
 
 def scalar_string(x):
+    x=unwrap(x)
     if isinstance(x,str): return x
+    if isinstance(x,bytes): return x.decode()
+    if isinstance(x,np.ndarray) and x.dtype.kind in 'US': return ''.join(x.astype(str).ravel().tolist())
     a=np.asarray(x)
     if a.size==1: return str(a.item())
     return str(x)
 
 
+def fld(o,name):
+    if isinstance(o,dict): return o[name]
+    return getattr(o,name)
+
+
 def opto_metrics(path):
-    d=loadmat(path,squeeze_me=True,struct_as_record=False)
-    objs=np.atleast_1d(d['optomat']).ravel()
+    d=mat73.loadmat(str(path))
+    objs=d['optomat']
+    if isinstance(objs,dict):
+        # mat73 can transpose a MATLAB struct array into a dict of field lists
+        n=max(len(v) if isinstance(v,list) else 1 for v in objs.values())
+        oo=[]
+        for i in range(n):
+            z={}
+            for k,v in objs.items():
+                if isinstance(v,list) and len(v)==n: z[k]=v[i]
+                else: z[k]=v
+            oo.append(z)
+        objs=oo
+    objs=np.atleast_1d(objs).ravel().tolist()
     rows=[]
+    print('opto objects',len(objs),type(objs[0]) if objs else None,flush=True)
     for si,o in enumerate(objs):
-        region=scalar_string(getattr(o,'fiber_location')).strip()
+        region=scalar_string(fld(o,'fiber_location')).strip()
         if region not in REGIONS: continue
-        trial=np.asarray(getattr(o,'trial_type')).astype(float).ravel()
-        lick=np.asarray(getattr(o,'lick_flag')).astype(bool).ravel()
-        early=np.asarray(getattr(o,'early_lick')).astype(bool).ravel()
-        wins=to_strings(getattr(o,'opto_window'))
+        trial=np.asarray(fld(o,'trial_type')).astype(float).ravel()
+        lick=np.asarray(fld(o,'lick_flag')).astype(bool).ravel()
+        early=np.asarray(fld(o,'early_lick')).astype(bool).ravel()
+        wins=to_strings(fld(o,'opto_window'))
         n=min(len(trial),len(lick),len(early),len(wins)); trial=trial[:n]; lick=lick[:n]; early=early[:n]; wins=wins[:n]
         completed=~early
         base=(completed)&(trial==1)&(wins=='nolight')
@@ -152,10 +179,8 @@ def exact_common_region_permutation(tab):
     base=tab.copy()
     for perm in itertools.permutations(REGIONS):
         pmap=dict(zip(REGIONS,perm))
-        t=base.copy();
-        # permute causal region labels consistently across epochs
         causal=base[['region','epoch','causal_impairment_pp']].copy(); causal['region']=causal['region'].map(pmap)
-        t=t.drop(columns=['causal_impairment_pp']).merge(causal,on=['region','epoch'],how='left')
+        t=base.drop(columns=['causal_impairment_pp']).merge(causal,on=['region','epoch'],how='left')
         vals.append(within_epoch_rank_stat(t))
     vals=np.asarray(vals,float); p=float(np.mean(vals>=obs-1e-12))
     return obs,p,vals
@@ -186,9 +211,7 @@ def cluster_bootstrap(tab,n=20000):
         idx=rng.integers(0,len(REGIONS),len(REGIONS)); sampled=[]
         for j,k in enumerate(idx):
             r=REGIONS[k]; q=tab[tab.region==r].copy(); q['region']=f'{r}_{j}'; sampled.append(q)
-        s=pd.concat(sampled,ignore_index=True)
-        # calculate same statistic by epoch, allowing duplicate sampled regions
-        xs=[];ys=[]
+        s=pd.concat(sampled,ignore_index=True); xs=[];ys=[]
         for ep in EPOCHS:
             q=s[s.epoch==ep]
             rx=rankdata(q.decoder_accuracy); ry=rankdata(q.causal_impairment_pp); rx-=rx.mean(); ry-=ry.mean(); xs.append(rx);ys.append(ry)
