@@ -1,0 +1,17 @@
+name: Guo Inagaki schema inventory
+on:
+  push:
+    paths:
+      - 'external_replication/guo_inagaki_schema.py'
+      - '.github/workflows/guo-inagaki-schema.yml'
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet requests
+      - run: python external_replication/guo_inagaki_schema.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guo-inagaki-schema
+          path: analysis/guo_inagaki_schema
