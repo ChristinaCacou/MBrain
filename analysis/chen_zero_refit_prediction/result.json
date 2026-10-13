@@ -1,0 +1,16 @@
+{
+  "status": "POST_HOC_ZERO_REFIT_EXTERNAL_PREDICTION",
+  "training": "Chen et al. 2021 mouse-level right-behavior model",
+  "test": "Chen et al. 2024 frozen-analysis right-behavior secondary mice",
+  "n_train": 18,
+  "n_test": 8,
+  "slope": 0.20404770,
+  "intercept": 0.83604771,
+  "external_r2": 0.47929563,
+  "mae": 0.02235645,
+  "spearman_rho": 0.66666667,
+  "permutation_p_r2": 0.01878991,
+  "bootstrap95_r2": [-2.50511943, 0.74636826],
+  "bootstrap95_mae": [0.01309582, 0.03165318],
+  "interpretation": "Post hoc diagnostic only; does not convert the prespecified Chen 2024 secondary endpoint into a confirmatory replication."
+}
