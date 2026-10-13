@@ -1,0 +1,17 @@
+name: Guo Inagaki NWB inspect
+on:
+  push:
+    paths:
+      - 'external_replication/guo_inagaki_nwb_inspect.py'
+      - '.github/workflows/guo-inagaki-inspect.yml'
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install --quiet requests h5py
+      - run: python external_replication/guo_inagaki_nwb_inspect.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guo-inagaki-nwb-inspect
+          path: analysis/guo_inagaki_nwb_inspect/report.json
