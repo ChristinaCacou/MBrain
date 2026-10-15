@@ -1,0 +1,276 @@
+name: Temporary raw-NIfTI LNM specificity reanalysis
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_lnm_raw_nifti_reanalysis_20261014.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis dependencies
+        run: pip install numpy scipy pandas scikit-learn matplotlib nibabel
+      - name: Download and reprocess all publicly redistributed LNM NIfTIs
+        shell: bash
+        run: |
+          cat > /tmp/raw_lnm_reanalysis.py <<'PY'
+          import os, json, hashlib, warnings
+          from pathlib import Path
+          import requests
+          import numpy as np
+          import pandas as pd
+          import nibabel as nib
+          from nibabel.processing import resample_from_to
+          from scipy.io import loadmat
+          from scipy.stats import spearmanr
+          from sklearn.decomposition import PCA
+          from sklearn.metrics import roc_auc_score
+          import matplotlib.pyplot as plt
+          warnings.filterwarnings('ignore')
+
+          SEED = 20261014
+          rng = np.random.default_rng(SEED)
+          OUT = Path('lnm_raw_nifti_reanalysis'); OUT.mkdir(exist_ok=True)
+          MAPDIR = OUT/'maps'; MAPDIR.mkdir(exist_ok=True)
+          BASE = 'https://raw.githubusercontent.com/dutchconnectomelab/lesionnetworkmapping/main'
+
+          # Complete set of raw 2-mm LNM/sLNM NIfTIs publicly redistributed in the
+          # five LNM_networks subdirectories of the van den Heuvel et al. repository.
+          maps = [
+            # computed from coordinates
+            dict(id='BURKE_MIGRAINE', folder='computed_LNM_coordinates', file='BURKE_MIGRAINE_2mm.nii.gz', condition='Migraine', strict='migraine', expanded='migraine', family='BURKE', concept='BURKE_MIGRAINE'),
+            dict(id='FOX_MDDDLPFCTMS', folder='computed_LNM_coordinates', file='FOX_MDDDLPFCTMS_2mm.nii.gz', condition='Depression', strict='depression', expanded='depression', family='FOX', concept='FOX_MDDDLPFCTMS'),
+            dict(id='JI_EPILEPSY_coordinates', folder='computed_LNM_coordinates', file='JI_EPILEPSY_2mm.nii.gz', condition='Epilepsy (coordinates)', strict='epilepsy', expanded='epilepsy', family='JI', concept='JI_EPILEPSY'),
+            dict(id='KUTCHE_CREATIVITY', folder='computed_LNM_coordinates', file='KUTCHE_CREATIVITY_2mm.nii.gz', condition='Creativity', strict='creativity', expanded='creativity', family='KUTCHE', concept='KUTCHE_CREATIVITY'),
+            # cortical-development / coordinate-derived maps
+            dict(id='SEGAL_ASD', folder='computed_LNM_cort_dev', file='SEGAL_ASD_2mm.nii.gz', condition='Autism spectrum disorder', strict='asd', expanded='asd', family='SEGAL', concept='SEGAL_ASD'),
+            dict(id='SEGAL_OCD', folder='computed_LNM_cort_dev', file='SEGAL_OCD_2mm.nii.gz', condition='OCD', strict='ocd', expanded='ocd', family='SEGAL', concept='SEGAL_OCD'),
+            dict(id='SEGAL_SCZ', folder='computed_LNM_cort_dev', file='SEGAL_SCZ_2mm.nii.gz', condition='Schizophrenia', strict='schizophrenia', expanded='psychosis_spectrum', family='SEGAL', concept='SEGAL_SCZ'),
+            # lesion-derived maps
+            dict(id='DARBY_CRIMINALITY', folder='computed_LNM_lesions', file='DARBY_CRIMINALITY_2mm.nii.gz', condition='Criminality', strict='criminality', expanded='criminality', family='DARBY', concept='DARBY_CRIMINALITY'),
+            dict(id='GANOS_TICS', folder='computed_LNM_lesions', file='GANOS_TICS_2mm.nii.gz', condition='Tics', strict='tics', expanded='tics', family='GANOS', concept='GANOS_TICS'),
+            dict(id='JOUTSA_ADDICTIONCONTRASTAB', folder='computed_LNM_lesions', file='JOUTSA_ADDICTIONCONTRASTAB_2mm.nii.gz', condition='Smoking addiction (contrast)', strict='smoking_addiction', expanded='smoking_addiction', family='JOUTSA', concept='JOUTSA_ADDICTION_CONTRAST'),
+            dict(id='JOUTSA_ADDICTIONGROUPA', folder='computed_LNM_lesions', file='JOUTSA_ADDICTIONGROUPA_2mm.nii.gz', condition='Smoking addiction remission', strict='smoking_addiction', expanded='smoking_addiction', family='JOUTSA', concept='JOUTSA_ADDICTION_GROUPA'),
+            dict(id='KUTSCHE_APHANTASIA', folder='computed_LNM_lesions', file='KUTSCHE_APHANTASIA_2mm.nii.gz', condition='Aphantasia', strict='aphantasia', expanded='aphantasia', family='KUTSCHE', concept='KUTSCHE_APHANTASIA'),
+            dict(id='ZARIFKAR_APHASIA', folder='computed_LNM_lesions', file='ZARIFKAR_APHASIA_2mm.nii.gz', condition='Aphasia', strict='aphasia', expanded='aphasia', family='ZARIFKAR', concept='ZARIFKAR_APHASIA'),
+            # prevalence-derived maps
+            dict(id='COTOVIO_MANIASETA', folder='computed_LNM_prevalence', file='COTOVIO_MANIASETA_2mm.nii.gz', condition='Mania', strict='mania', expanded='mania', family='COTOVIO', concept='COTOVIO_MANIA'),
+            dict(id='COTOVIO_OCD', folder='computed_LNM_prevalence', file='COTOVIO_OCD_2mm.nii.gz', condition='OCD', strict='ocd', expanded='ocd', family='COTOVIO', concept='COTOVIO_OCD'),
+            # directly downloaded published maps
+            dict(id='JI_EPILEPSY_downloaded', folder='downloaded_LNM', file='JI_EPILEPSY_2mm.nii.gz', condition='Epilepsy (LNM)', strict='epilepsy', expanded='epilepsy', family='JI', concept='JI_EPILEPSY'),
+            dict(id='JOUTSA_TREMORDBS', folder='downloaded_LNM', file='JOUTSA_TREMORDBS_2mm.nii.gz', condition='Tremor DBS', strict='tremor', expanded='tremor', family='JOUTSA', concept='JOUTSA_TREMORDBS'),
+            dict(id='LI_OCDDBS', folder='downloaded_LNM', file='LI_OCDDBS_2mm.nii.gz', condition='OCD DBS', strict='ocd', expanded='ocd', family='LI', concept='LI_OCDDBS'),
+            dict(id='PINES_PSYCHOSIS', folder='downloaded_LNM', file='PINES_PSYCHOSIS_2mm.nii.gz', condition='Psychosis', strict='psychosis', expanded='psychosis_spectrum', family='PINES', concept='PINES_PSYCHOSIS'),
+            dict(id='SIDDIQI_ANXIETYi', folder='downloaded_LNM', file='SIDDIQI_ANXIETYi_2mm.nii.gz', condition='Anxiety-depression symptoms', strict='anxiety_depression', expanded='depression_spectrum', family='SIDDIQI', concept='SIDDIQI_ANXIETY'),
+            dict(id='SIDDIQI_DEPRESSION', folder='downloaded_LNM', file='SIDDIQI_DEPRESSION_2mm.nii.gz', condition='Depression', strict='depression', expanded='depression', family='SIDDIQI', concept='SIDDIQI_DEPRESSION'),
+            dict(id='SIDDIQI_MSDEPRESSION', folder='downloaded_LNM', file='SIDDIQI_MSDEPRESSION_2mm.nii.gz', condition='MS depression', strict='ms_depression', expanded='depression', family='SIDDIQI', concept='SIDDIQI_MSDEPRESSION'),
+            dict(id='SIDDIQI_POLITICAL', folder='downloaded_LNM', file='SIDDIQI_POLITICAL_2mm.nii.gz', condition='Political involvement', strict='political', expanded='political', family='SIDDIQI', concept='SIDDIQI_POLITICAL'),
+            dict(id='SIDDIQI_PTSD', folder='downloaded_LNM', file='SIDDIQI_PTSD_2mm.nii.gz', condition='PTSD', strict='ptsd', expanded='ptsd', family='SIDDIQI', concept='SIDDIQI_PTSD'),
+          ]
+
+          def get(url, dest):
+              r=requests.get(url,timeout=120); r.raise_for_status(); dest.write_bytes(r.content); return r.content
+
+          # Independent topology reference: atlas and GSP1000 connectome used by the source repository.
+          atlas_url = BASE + '/utils/parcellations/schaefer1000-yeo7+melbourne_MNI152_2mm.nii.gz'
+          conn_url = BASE + '/data/normative_connectome/GSP1000_FC_Schaefer1000Melbourne54.mat'
+          atlas_path=OUT/'schaefer1000_melbourne54_2mm.nii.gz'; get(atlas_url, atlas_path)
+          conn_path=OUT/'GSP1000_FC_Schaefer1000Melbourne54.mat'; get(conn_url, conn_path)
+          atlas_img=nib.load(atlas_path); atlas=np.asarray(atlas_img.dataobj).astype(int)
+          labels=np.array(sorted([int(x) for x in np.unique(atlas) if x>0]))
+          C=np.asarray(loadmat(conn_path)['FC'],float)
+          if C.shape[0] != len(labels):
+              raise RuntimeError(f'Connectome/atlas mismatch: C={C.shape}, labels={len(labels)}')
+
+          # Degree + subcortical degree + functional-connectome PCs.  The primary residualizer
+          # uses degree, subcortical degree and PCs 1-3; PCs 1-20 form a prespecified sensitivity multiverse.
+          degree=np.nanmean(C,axis=0)
+          subdegree=np.nanmean(C[:54,:],axis=0)
+          pca=PCA(n_components=20,svd_solver='full').fit(C)
+          pcs=pca.components_.T
+          topo = {'raw': None}
+          for k in [1,3,5,10,20]:
+              X=np.column_stack([degree,subdegree,pcs[:,:k]])
+              X=(X-X.mean(axis=0))/(X.std(axis=0)+1e-12)
+              topo[f'resid_dg{k}']=np.column_stack([np.ones(len(labels)),X])
+
+          meta=[]; parcels={}; voxels={}
+          mask=atlas>0
+          target=(atlas_img.shape, atlas_img.affine)
+          for m in maps:
+              url=f"{BASE}/data/LNM_networks/{m['folder']}/{m['file']}"
+              dest=MAPDIR/(m['id']+'.nii.gz'); content=get(url,dest)
+              h=hashlib.sha256(content).hexdigest()
+              img=nib.load(dest)
+              same=(img.shape==atlas_img.shape and np.allclose(img.affine,atlas_img.affine,atol=1e-3))
+              if not same: img=resample_from_to(img,target,order=1)
+              dat=np.asarray(img.dataobj,dtype=float)
+              vv=dat[mask]; fin=np.isfinite(vv)
+              v=np.full(mask.sum(),np.nan); v[fin]=vv[fin]
+              voxels[m['id']]=v
+              pv=np.full(len(labels),np.nan)
+              for ii,lab in enumerate(labels):
+                  a=dat[atlas==lab]; a=a[np.isfinite(a)]
+                  if a.size: pv[ii]=np.mean(a)
+              parcels[m['id']]=pv
+              rr=dict(m); rr.update(sha256=h, bytes=len(content), original_shape=str(nib.load(dest).shape), resampled=not same,
+                                        voxel_coverage=float(np.mean(fin)), parcel_coverage=float(np.mean(np.isfinite(pv))))
+              meta.append(rr)
+              print('loaded',m['id'],rr['bytes'],rr['voxel_coverage'],rr['parcel_coverage'],h[:12])
+          meta=pd.DataFrame(meta)
+          meta.to_csv(OUT/'map_manifest.csv',index=False)
+
+          ids=meta.id.tolist(); P=np.vstack([parcels[i] for i in ids]); V=np.vstack([voxels[i] for i in ids])
+          pd.DataFrame(P,index=ids,columns=[f'ROI_{x}' for x in labels]).to_csv(OUT/'parcel_values_raw.csv.gz',compression='gzip')
+
+          # Topology residualization and per-map burden.
+          representations={'raw':P.copy()}; burden=[]
+          for state,X in topo.items():
+              if state=='raw': continue
+              R=np.full_like(P,np.nan)
+              for i,mid in enumerate(ids):
+                  y=P[i]; ok=np.isfinite(y)&np.all(np.isfinite(X),axis=1)
+                  beta=np.linalg.lstsq(X[ok],y[ok],rcond=None)[0]; pred=X@beta
+                  R[i]=y-pred
+                  sst=np.sum((y[ok]-np.mean(y[ok]))**2); sse=np.sum((y[ok]-pred[ok])**2)
+                  burden.append({'id':mid,'state':state,'r2_topology':1-sse/sst if sst>0 else np.nan,'n_parcels':int(ok.sum())})
+              representations[state]=R
+          pd.DataFrame(burden).to_csv(OUT/'topology_burden.csv',index=False)
+
+          def corr(a,b):
+              ok=np.isfinite(a)&np.isfinite(b)
+              if ok.sum()<20 or np.std(a[ok])<1e-12 or np.std(b[ok])<1e-12: return np.nan
+              return float(np.corrcoef(a[ok],b[ok])[0,1])
+
+          # Pairwise raw voxel and parcel correlations, plus residualized parcel correlations.
+          pairs=[]
+          md=meta.set_index('id')
+          for i in range(len(ids)):
+              for j in range(i+1,len(ids)):
+                  a,b=ids[i],ids[j]; ma,mb=md.loc[a],md.loc[b]
+                  row={'id1':a,'id2':b,'family1':ma.family,'family2':mb.family,'strict1':ma.strict,'strict2':mb.strict,
+                       'expanded1':ma.expanded,'expanded2':mb.expanded,'concept1':ma.concept,'concept2':mb.concept,
+                       'independent_family':bool(ma.family!=mb.family),'same_concept':bool(ma.concept==mb.concept),
+                       'strict_match':bool(ma.strict==mb.strict),'expanded_match':bool(ma.expanded==mb.expanded),
+                       'r_voxel_raw':corr(V[i],V[j]),'r_parcel_raw':corr(P[i],P[j])}
+                  for state,R in representations.items():
+                      if state!='raw': row['r_'+state]=corr(R[i],R[j])
+                  pairs.append(row)
+          pairs=pd.DataFrame(pairs)
+          pairs.to_csv(OUT/'pairwise_similarity.csv',index=False)
+
+          # Direct reproducibility check: raw voxel and parcel similarity should agree strongly.
+          q=pairs[['r_voxel_raw','r_parcel_raw']].dropna()
+          rv_rp=float(spearmanr(q.r_voxel_raw,q.r_parcel_raw).statistic)
+
+          states=['r_parcel_raw','r_resid_dg1','r_resid_dg3','r_resid_dg5','r_resid_dg10','r_resid_dg20']
+          def summarize(label_col, label_name, nperm=20000):
+              base=pairs[(pairs.independent_family)&(~pairs.same_concept)].copy()
+              labels0=meta.set_index('id')[label_col].to_dict()
+              out=[]; perm_rows=[]
+              idarr=np.array(ids); labarr=np.array([labels0[i] for i in ids],dtype=object)
+              # fixed eligible pair list; family/concept exclusion is independent of labels.
+              ij=[(ids.index(a),ids.index(b)) for a,b in zip(base.id1,base.id2)]
+              for st in states:
+                  d=base[['id1','id2',st]].dropna().copy()
+                  d['match']=[labels0[a]==labels0[b] for a,b in zip(d.id1,d.id2)]
+                  pos=d[d.match][st].to_numpy(); neg=d[~d.match][st].to_numpy()
+                  if len(pos)==0 or len(neg)==0: continue
+                  delta=float(np.median(pos)-np.median(neg))
+                  auc=float(roc_auc_score(d.match.astype(int),d[st]))
+                  # permutation preserves the complete multiset of phenotype labels and all spatial values.
+                  dscores=d[st].to_numpy(); pair_indices=[(ids.index(a),ids.index(b)) for a,b in zip(d.id1,d.id2)]
+                  pdelta=[]; pauc=[]
+                  for _ in range(nperm):
+                      plab=rng.permutation(labarr)
+                      yy=np.array([plab[i]==plab[j] for i,j in pair_indices])
+                      if yy.sum()==0 or yy.sum()==len(yy): continue
+                      pdelta.append(np.median(dscores[yy])-np.median(dscores[~yy]))
+                      pauc.append(roc_auc_score(yy.astype(int),dscores))
+                  pdelta=np.asarray(pdelta); pauc=np.asarray(pauc)
+                  p_delta=float((1+np.sum(pdelta>=delta))/(1+len(pdelta)))
+                  p_auc=float((1+np.sum(pauc>=auc))/(1+len(pauc)))
+                  out.append({'labeling':label_name,'state':st,'n_pairs':len(d),'n_matched':len(pos),'n_mismatched':len(neg),
+                              'median_matched':float(np.median(pos)),'median_mismatched':float(np.median(neg)),
+                              'delta_median':delta,'auc':auc,'perm_p_delta':p_delta,'perm_p_auc':p_auc,
+                              'perm_delta_025':float(np.quantile(pdelta,.025)),'perm_delta_975':float(np.quantile(pdelta,.975))})
+              return out
+
+          summaries=summarize('strict','strict')+summarize('expanded','expanded')
+          summary_df=pd.DataFrame(summaries); summary_df.to_csv(OUT/'discrimination_summary.csv',index=False)
+
+          # Adversarial nearest-wrong specificity margin for maps with at least one independent same-label comparator.
+          margins=[]
+          for labeling,col in [('strict','strict'),('expanded','expanded')]:
+              lab=meta.set_index('id')[col].to_dict(); fam=meta.set_index('id').family.to_dict(); concept=meta.set_index('id').concept.to_dict()
+              for st in states:
+                  for mid in ids:
+                      same=[]; wrong=[]
+                      for oid in ids:
+                          if oid==mid or fam[oid]==fam[mid] or concept[oid]==concept[mid]: continue
+                          rr=pairs[((pairs.id1==mid)&(pairs.id2==oid))|((pairs.id2==mid)&(pairs.id1==oid))]
+                          if rr.empty or not np.isfinite(rr.iloc[0][st]): continue
+                          val=float(rr.iloc[0][st])
+                          (same if lab[oid]==lab[mid] else wrong).append((oid,val))
+                      if same and wrong:
+                          samevals=[x[1] for x in same]; wrongvals=[x[1] for x in wrong]
+                          bestsame=max(same,key=lambda x:x[1]); bestwrong=max(wrong,key=lambda x:x[1])
+                          margins.append({'labeling':labeling,'state':st,'id':mid,'label':lab[mid],'n_same':len(same),'n_wrong':len(wrong),
+                                          'mean_same':float(np.mean(samevals)),'best_same_id':bestsame[0],'best_same':bestsame[1],
+                                          'best_wrong_id':bestwrong[0],'best_wrong':bestwrong[1],
+                                          'adversarial_margin_mean_vs_bestwrong':float(np.mean(samevals)-bestwrong[1]),
+                                          'nearest_neighbor_correct':bool(bestsame[1]>bestwrong[1])})
+          margins=pd.DataFrame(margins); margins.to_csv(OUT/'adversarial_margins.csv',index=False)
+
+          # Figure: primary strict phenotype analysis, raw vs degree-gradient residualized (k=3),
+          # plus topology burden and per-map adversarial margins.
+          primary=summary_df[(summary_df.labeling=='strict') & summary_df.state.isin(['r_parcel_raw','r_resid_dg3'])].set_index('state')
+          base=pairs[(pairs.independent_family)&(~pairs.same_concept)].copy()
+          fig=plt.figure(figsize=(12,9))
+          ax1=fig.add_axes([.08,.58,.38,.34]); ax2=fig.add_axes([.56,.58,.38,.34]); ax3=fig.add_axes([.08,.10,.38,.34]); ax4=fig.add_axes([.56,.10,.38,.34])
+          for ax,st,title in [(ax1,'r_parcel_raw','Raw parcel similarity'),(ax2,'r_resid_dg3','After degree + PC1-3 residualization')]:
+              lab=meta.set_index('id').strict.to_dict(); d=base[['id1','id2',st]].dropna().copy(); d['match']=[lab[a]==lab[b] for a,b in zip(d.id1,d.id2)]
+              vals=[d.loc[~d.match,st].values,d.loc[d.match,st].values]
+              bp=ax.boxplot(vals,positions=[0,1],widths=.55,showfliers=False)
+              for x,v in zip([0,1],vals): ax.scatter(np.full(len(v),x)+rng.normal(0,.035,len(v)),v,s=14,alpha=.45)
+              ax.set_xticks([0,1]); ax.set_xticklabels(['Phenotype-mismatched','Phenotype-matched'],rotation=12); ax.set_ylabel('Pearson r'); ax.set_title(title)
+              if st in primary.index:
+                  z=primary.loc[st]; ax.text(.03,.97,f"Δmedian={z.delta_median:.3f}\nAUC={z.auc:.3f}\nperm P={z.perm_p_delta:.4g}",transform=ax.transAxes,va='top',fontsize=9)
+          b3=pd.DataFrame(burden); q3=b3[b3.state=='resid_dg3'].sort_values('r2_topology',ascending=False)
+          ax3.bar(np.arange(len(q3)),q3.r2_topology.values); ax3.axhline(np.median(q3.r2_topology),ls='--',lw=1); ax3.set_ylim(0,1); ax3.set_ylabel('R² explained'); ax3.set_xlabel('Public LNM map'); ax3.set_title('Degree + PC1-3 topology burden')
+          mm=margins[(margins.labeling=='strict')&(margins.state=='r_resid_dg3')].sort_values('adversarial_margin_mean_vs_bestwrong')
+          if len(mm):
+              ax4.barh(np.arange(len(mm)),mm.adversarial_margin_mean_vs_bestwrong.values); ax4.axvline(0,lw=1); ax4.set_yticks(np.arange(len(mm))); ax4.set_yticklabels(mm.id.tolist(),fontsize=7); ax4.set_xlabel('Mean same-phenotype r − strongest wrong-phenotype r'); ax4.set_title('Adversarial specificity after residualization')
+          fig.suptitle('Direct reprocessing of publicly redistributed raw LNM NIfTI maps',fontsize=14,y=.98)
+          fig.savefig(OUT/'Figure_raw_nifti_specificity.png',dpi=300,bbox_inches='tight'); plt.close(fig)
+
+          # Machine-readable summary.
+          prim=summary_df[(summary_df.labeling=='strict')].set_index('state')
+          expd=summary_df[(summary_df.labeling=='expanded')].set_index('state')
+          tb=pd.DataFrame(burden)
+          result={
+            'seed':SEED,'n_raw_maps':len(ids),'n_unique_sha256':int(meta.sha256.nunique()),
+            'raw_voxel_vs_parcel_similarity_spearman':rv_rp,
+            'topology_r2_primary_median':float(tb[tb.state=='resid_dg3'].r2_topology.median()),
+            'topology_r2_primary_iqr':[float(tb[tb.state=='resid_dg3'].r2_topology.quantile(.25)),float(tb[tb.state=='resid_dg3'].r2_topology.quantile(.75))],
+            'strict_raw':prim.loc['r_parcel_raw'].to_dict() if 'r_parcel_raw' in prim.index else None,
+            'strict_resid_dg3':prim.loc['r_resid_dg3'].to_dict() if 'r_resid_dg3' in prim.index else None,
+            'expanded_raw':expd.loc['r_parcel_raw'].to_dict() if 'r_parcel_raw' in expd.index else None,
+            'expanded_resid_dg3':expd.loc['r_resid_dg3'].to_dict() if 'r_resid_dg3' in expd.index else None,
+          }
+          (OUT/'summary.json').write_text(json.dumps(result,indent=2,default=lambda x: float(x) if hasattr(x,'item') else str(x)))
+          (OUT/'README.txt').write_text('Direct raw-NIfTI reanalysis of every 2-mm LNM/sLNM map publicly redistributed under data/LNM_networks in dutchconnectomelab/lesionnetworkmapping as accessed on 2026-10-14. Primary inference excludes same-first-author-family pairs and duplicate concept representations. Degree-gradient residualization uses the independently supplied GSP1000 Schaefer1000+Melbourne54 connectome. See map_manifest.csv, pairwise_similarity.csv, topology_burden.csv, discrimination_summary.csv, adversarial_margins.csv, and summary.json.\n')
+          print(json.dumps(result,indent=2,default=str))
+          PY
+          python /tmp/raw_lnm_reanalysis.py | tee lnm_raw_nifti_reanalysis/run_log.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: raw-nifti-lnm-reanalysis-20261014
+          path: lnm_raw_nifti_reanalysis/
+          retention-days: 7
