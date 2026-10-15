@@ -1,0 +1,40 @@
+name: Temporary raw-NIfTI LNM specificity reanalysis fast
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_lnm_raw_nifti_reanalysis_20261014_fast.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests numpy scipy pandas scikit-learn matplotlib nibabel
+      - name: Execute raw NIfTI analysis with 5000 label permutations
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          src=Path('.github/workflows/tmp_lnm_raw_nifti_reanalysis_20261014.yml').read_text().splitlines()
+          start=next(i for i,x in enumerate(src) if "cat > /tmp/raw_lnm_reanalysis.py <<'PY'" in x)+1
+          end=next(i for i in range(start,len(src)) if src[i].strip()=='PY')
+          out='\n'.join((x[10:] if x.startswith('          ') else x) for x in src[start:end])+'\n'
+          out=out.replace('nperm=20000','nperm=5000')
+          Path('/tmp/raw_lnm_reanalysis.py').write_text(out)
+          PY
+          mkdir -p lnm_raw_nifti_reanalysis
+          python /tmp/raw_lnm_reanalysis.py | tee lnm_raw_nifti_reanalysis/run_log.txt
+          echo '===SUMMARY_JSON==='; cat lnm_raw_nifti_reanalysis/summary.json
+          echo '===DISCRIMINATION_CSV==='; cat lnm_raw_nifti_reanalysis/discrimination_summary.csv
+          echo '===MARGINS_CSV==='; cat lnm_raw_nifti_reanalysis/adversarial_margins.csv
+          echo '===TOPOLOGY_CSV==='; cat lnm_raw_nifti_reanalysis/topology_burden.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: raw-nifti-lnm-reanalysis-20261014-fast
+          path: lnm_raw_nifti_reanalysis/
+          retention-days: 7
