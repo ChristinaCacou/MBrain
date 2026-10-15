@@ -1,0 +1,35 @@
+name: Temporary official eICU robustness validation 20261015
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_official_eicu_robustness_validation_20261015.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy pandas scikit-learn matplotlib
+      - name: Download official eICU demo and validate
+        shell: bash
+        run: |
+          mkdir -p raw_eicu eicu_official_validation
+          curl -L --fail --retry 3 --connect-timeout 20 --max-time 240 -o raw_eicu/patient.csv.gz https://physionet.org/files/eicu-crd-demo/2.0.1/patient.csv.gz
+          curl -L --fail --retry 3 --connect-timeout 20 --max-time 300 -o raw_eicu/vital.csv.gz https://physionet.org/files/eicu-crd-demo/2.0.1/vitalPeriodic.csv.gz
+          cat > /tmp/a.b64 <<'B64'
+          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
+          B64
+          base64 -d /tmp/a.b64 | gzip -d > /tmp/analysis.py
+          python /tmp/analysis.py | tee eicu_official_validation/run.log
+          cp /tmp/analysis.py eicu_official_validation/eicu_official_analysis.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: official-eicu-robustness-validation-20261015
+          path: eicu_official_validation/
+          retention-days: 7
