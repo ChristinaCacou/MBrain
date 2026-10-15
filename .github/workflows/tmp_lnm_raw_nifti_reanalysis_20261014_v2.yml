@@ -1,0 +1,39 @@
+name: Temporary raw-NIfTI LNM specificity reanalysis v2
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_lnm_raw_nifti_reanalysis_20261014_v2.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis dependencies
+        run: pip install requests numpy scipy pandas scikit-learn matplotlib nibabel
+      - name: Extract analysis script from v1 workflow and execute
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          src=Path('.github/workflows/tmp_lnm_raw_nifti_reanalysis_20261014.yml').read_text().splitlines()
+          start=next(i for i,x in enumerate(src) if "cat > /tmp/raw_lnm_reanalysis.py <<'PY'" in x)+1
+          end=next(i for i in range(start,len(src)) if src[i].strip()=='PY')
+          lines=src[start:end]
+          # YAML block content is indented by ten spaces in the source workflow.
+          out='\n'.join((x[10:] if x.startswith('          ') else x) for x in lines)+'\n'
+          Path('/tmp/raw_lnm_reanalysis.py').write_text(out)
+          print('extracted lines',len(lines))
+          PY
+          mkdir -p lnm_raw_nifti_reanalysis
+          python /tmp/raw_lnm_reanalysis.py | tee lnm_raw_nifti_reanalysis/run_log.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: raw-nifti-lnm-reanalysis-20261014-v2
+          path: lnm_raw_nifti_reanalysis/
+          retention-days: 7
