@@ -1,0 +1,15 @@
+PREREGISTRATION LOCK MANIFEST
+Protocol version: 1.0
+Prepared: 2026-10-16
+Status: locally locked, NOT YET PUBLICLY PREREGISTERED
+Public time-stamping of this manifest and the listed prospective files must occur before the first confirmatory biological observation.
+
+SHA-256
+05ed3f2bb4284ef2c63227362528bc4a16487644482418d7f42fd5de72c34c05  Aneural_Adaptive_Dynamics_Consciousness_Article.docx
+f2c7c0b7c329a45d532a6c96bcae6417a5a4f9cc4772f28928b1ab832bbc308c  Stentor_Prospective_Perturbation_Preregistration.docx
+7b319877eb749736c51fc302637cd0dc49cdc1b460310a3354b5955d96701151  Prospective_Stentor_Validation_Analysis.py
+a6b08df58cc94973659099396cf48db7c01c6f16adb86eabfb2ad4b1a7b57ab2  Stentor_Validation_Data_Template.csv
+
+SOFTWARE DRY-RUN
+Prospective_Stentor_Validation_Analysis.py successfully executed its synthetic self-test before lock. The synthetic output is software validation only and is not biological evidence.
+08c8ca533d59656511113480c4fee39d8e567a0f4b787d2f578100efe29bca66  prospective_selftest/synthetic_results/confirmatory_results.json
