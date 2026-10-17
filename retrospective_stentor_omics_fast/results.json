@@ -1,0 +1,76 @@
+{
+  "source": "Rajan et al. Current Biology 2026 / Dryad 10.5061/dryad.z34tmpgrm",
+  "status": "retrospective public-data reanalysis, separate from prospective preregistration",
+  "original_matrix_shape": [
+    34494,
+    12
+  ],
+  "genes_analyzed": 28296,
+  "mapped_columns": {
+    "t19": [
+      "DR4876_01",
+      "DR4876_04",
+      "DR4876_07"
+    ],
+    "u19": [
+      "DR4876_03",
+      "DR4876_06",
+      "DR4876_09"
+    ],
+    "f10": [
+      "DR4876_10",
+      "DR4876_12",
+      "DR4876_14"
+    ],
+    "f90": [
+      "DR4876_16",
+      "DR4876_18",
+      "DR4876_20"
+    ]
+  },
+  "memory_index": {
+    "t19": 1.0,
+    "u19": 0.0,
+    "f10": 0.41909101713926844,
+    "f90": 0.45025236711200717
+  },
+  "bootstrap95": {
+    "f10": [
+      0.20513671996109792,
+      0.7359727499950193
+    ],
+    "f90": [
+      0.21399052569217747,
+      0.7791022493405079
+    ],
+    "f10_minus_f90": [
+      -0.3437333599779997,
+      0.23861677404506856
+    ]
+  },
+  "crossfitted_means": {
+    "f10": 0.46972424662960477,
+    "f90": 0.4532914036564099,
+    "t19": 0.683961438854506,
+    "u19": 0.3534700671086191
+  },
+  "pca_variance": [
+    0.28601460319138333,
+    0.16454998840695037
+  ],
+  "alignment": {
+    "common_genes": 27229,
+    "training_q_lt_0.05": 83,
+    "cosine": 0.5948260558044721,
+    "cosine_permutation_p": 0.000999000999000999,
+    "spearman_rho": 0.4503226156330333,
+    "spearman_p": 0.0,
+    "same_direction_n": 78,
+    "same_direction_fraction": 0.9397590361445783,
+    "same_direction_binomial_p": 3.2019524582856035e-18,
+    "median_abs_t19_minus_f90_over_t19_minus_untrained": 0.5787468576643572,
+    "effective_number_of_training_effect_genes": 35.4409886979332,
+    "genes_for_50pct_effect_energy": 14,
+    "genes_for_80pct_effect_energy": 32
+  }
+}
