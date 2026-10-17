@@ -7,6 +7,7 @@ on:
       - '.github/workflows/long_covid_raw_transcriptomics.yml'
       - 'analysis/long_covid_raw_transcriptomics.py'
       - 'analysis/long_covid_raw_transcriptomics_v2.py'
+      - 'analysis/long_covid_raw_transcriptomics_v3.py'
 
 permissions:
   contents: write
@@ -27,13 +28,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy pandas scipy
       - name: Run raw-count analyses
-        run: python analysis/long_covid_raw_transcriptomics_v2.py
+        run: python analysis/long_covid_raw_transcriptomics_v3.py
       - name: Commit compact analysis outputs
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add analysis_outputs
-          git commit -m 'Add executed GSE225517 and GSE211934 raw-count results' || exit 0
+          git commit -m 'Update executed GSE225517 and GSE211934 raw-count results' || exit 0
           git push origin analysis-long-covid-transcriptomics
       - name: Upload complete analysis outputs
         uses: actions/upload-artifact@v4
