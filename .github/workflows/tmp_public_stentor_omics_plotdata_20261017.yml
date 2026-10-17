@@ -1,0 +1,49 @@
+name: Temporary Stentor omics figure data 20261017
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_public_stentor_omics_plotdata_20261017.yml'
+permissions:
+  contents: write
+jobs:
+  derive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prereg-stentor-aneural-consciousness-2026-10-16
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy
+      - shell: bash
+        run: |
+          python - <<'PY'
+          import numpy as np, pandas as pd
+          from pathlib import Path
+          B='https://raw.githubusercontent.com/aralbright/2025_stentor_learning/main/exp2/'
+          O=Path('retrospective_stentor_omics_fast'); O.mkdir(exist_ok=True)
+          def t(url):
+              d=pd.read_csv(url); return d[['target_id','b','qval']].rename(columns={'target_id':'gene'}).dropna()
+          a=t(B+'exp2_rna_t19ut19_sleuth_wald_v2.csv'); f=t(B+'exp2_rna_t19f90_sleuth_wald.csv')
+          j=a.merge(f,on='gene',suffixes=('_train','_forget'))
+          s=j[j.qval_train<.05].copy().sort_values('qval_train')
+          s.to_csv(O/'significant_training_genes.csv',index=False)
+          e=(s.b_train.to_numpy(float)**2); order=np.argsort(-e); e=e[order]; genes=s.gene.to_numpy()[order]
+          cum=np.cumsum(e)/e.sum()
+          pd.DataFrame({'rank':np.arange(1,len(e)+1),'gene':genes,'effect_energy_fraction':e/e.sum(),'cumulative_effect_energy':cum}).to_csv(O/'training_effect_energy_curve.csv',index=False)
+          # 40 equal-count bins across all common genes for an uncluttered alignment plot.
+          j=j.sort_values('b_train').reset_index(drop=True)
+          j['bin']=pd.qcut(np.arange(len(j)),q=40,labels=False)
+          b=j.groupby('bin').agg(b_train_mean=('b_train','mean'),b_forget_mean=('b_forget','mean'),b_train_median=('b_train','median'),b_forget_median=('b_forget','median'),n=('gene','size')).reset_index()
+          b.to_csv(O/'alignment_quantile_bins.csv',index=False)
+          PY
+      - shell: bash
+        run: |
+          git pull --rebase origin prereg-stentor-aneural-consciousness-2026-10-16
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add retrospective_stentor_omics_fast/significant_training_genes.csv retrospective_stentor_omics_fast/training_effect_energy_curve.csv retrospective_stentor_omics_fast/alignment_quantile_bins.csv
+          git commit -m 'Add compact figure data for Stentor omics validation' || exit 0
+          git push origin HEAD:prereg-stentor-aneural-consciousness-2026-10-16
