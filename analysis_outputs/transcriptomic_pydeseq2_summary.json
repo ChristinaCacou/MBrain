@@ -1,0 +1,52 @@
+{
+  "method": "PyDESeq2 0.5.x negative-binomial reanalysis plus exact Freedman-Lane residual permutation for prespecified modules",
+  "GSE225517": {
+    "common_genes": 23041,
+    "FDR_4dpi": 3728,
+    "FDR_28dpi": 124,
+    "FDR_both": 30,
+    "same_direction_both": 3,
+    "same_direction_fraction_both": 0.1,
+    "overlap_hypergeom_p": 0.01349060841528225,
+    "spearman_all_effects": -0.14833686943519853,
+    "spearman_all_effects_p": 1.7277567147350053e-113
+  },
+  "GSE211934": {
+    "filtered_genes": 21365,
+    "interaction_p_lt_0_05": 56,
+    "interaction_FDR_lt_0_05": 0,
+    "interaction_abs_log2FC_ge_1": 12957
+  },
+  "modules": [
+    {
+      "n_genes": 4,
+      "genes_found": "FADD;BAX;BID;CASP9",
+      "interaction_beta": 0.38179862619557137,
+      "perm_p": 0.31430272066665016,
+      "permutations": 40320,
+      "module": "source_apoptosis_qpcr",
+      "mean_PyDESeq2_interaction_log2FC": 0.4561706463075339,
+      "individual_interaction_pvalues": "FADD:0.2399;BAX:0.6885;BID:0.914;CASP9:0.5328"
+    },
+    {
+      "n_genes": 4,
+      "genes_found": "WDR45;TECPR2;MAP1LC3A;SQSTM1",
+      "interaction_beta": 0.4776666330173732,
+      "perm_p": 0.371444160611096,
+      "permutations": 40320,
+      "module": "source_autophagy_qpcr",
+      "mean_PyDESeq2_interaction_log2FC": 0.7613311114568906,
+      "individual_interaction_pvalues": "WDR45:0.65;TECPR2:0.418;MAP1LC3A:0.2538;SQSTM1:0.9878"
+    },
+    {
+      "n_genes": 8,
+      "genes_found": "TH;DDC;SLC18A2;SLC6A3;SNAP25;SYN1;SYT1;VAMP2",
+      "interaction_beta": -0.8158506570615384,
+      "perm_p": 0.14287840083331266,
+      "permutations": 40320,
+      "module": "dopaminergic_presynaptic_hypothesis",
+      "mean_PyDESeq2_interaction_log2FC": -0.2621476444876305,
+      "individual_interaction_pvalues": "TH:0.8864;DDC:0.4067;SLC18A2:0.5238;SLC6A3:0.5113;SNAP25:0.2675;SYN1:0.6695;SYT1:0.365;VAMP2:0.5789"
+    }
+  ]
+}
