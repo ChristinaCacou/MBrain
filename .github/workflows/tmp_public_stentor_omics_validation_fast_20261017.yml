@@ -1,0 +1,95 @@
+name: Temporary fast public Stentor omics validation 20261017
+
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_public_stentor_omics_validation_fast_20261017.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prereg-stentor-aneural-consciousness-2026-10-16
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy pandas scipy scikit-learn
+      - name: Analyze public Stentor transcriptomics
+        shell: bash
+        run: |
+          rm -rf retrospective_stentor_omics_fast
+          mkdir -p retrospective_stentor_omics_fast
+          cat > /tmp/analyze.py <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np, pandas as pd
+          from scipy.stats import spearmanr, binomtest
+          from sklearn.decomposition import PCA
+          O=Path('retrospective_stentor_omics_fast')
+          B='https://raw.githubusercontent.com/aralbright/2025_stentor_learning/main/exp2/'
+          X0=pd.read_csv(B+'exp2_rna_no0_sleuth_obsnorm.csv',index_col=0).apply(pd.to_numeric,errors='coerce')
+          X0=X0.loc[:,X0.notna().any(axis=0)]
+          cols=[str(c) for c in X0.columns]
+          expected={'t19':['DR4876_01','DR4876_04','DR4876_07'],'u19':['DR4876_03','DR4876_06','DR4876_09'],'f10':['DR4876_10','DR4876_12','DR4876_14'],'f90':['DR4876_16','DR4876_18','DR4876_20']}
+          def find(s):
+              if s in cols:return s
+              z=s[-2:]; q=[c for c in cols if s in c or c.endswith('_'+z) or c.endswith(z)]
+              if len(q)!=1: raise RuntimeError(f'{s} mapping failed; columns={cols}')
+              return q[0]
+          G={g:[find(s) for s in ss] for g,ss in expected.items()}; used=sum(G.values(),[])
+          X0=X0[used].replace([np.inf,-np.inf],np.nan).fillna(0)
+          X=np.log1p(X0.loc[(X0.mean(1)>=1)&(X0.var(1)>0)])
+          U=X[G['u19']].mean(1).to_numpy(); T=X[G['t19']].mean(1).to_numpy(); D=T-U; den=float(D@D)
+          def mi(g):
+              M=X[G[g]].mean(1).to_numpy(); return float((M-U)@D/den)
+          m={g:mi(g) for g in G}
+          rng=np.random.default_rng(20261017); br=[]
+          for _ in range(3000):
+              ii={g:rng.integers(0,3,3) for g in G}
+              Ub=X[[G['u19'][i] for i in ii['u19']]].mean(1).to_numpy(); Tb=X[[G['t19'][i] for i in ii['t19']]].mean(1).to_numpy(); d=Tb-Ub; q=float(d@d)
+              if q<1e-15:continue
+              vals={g:float((X[[G[g][i] for i in ii[g]]].mean(1).to_numpy()-Ub)@d/q) for g in ['f10','f90']}
+              br.append([vals['f10'],vals['f90'],vals['f10']-vals['f90']])
+          br=np.array(br); ci={'f10':np.quantile(br[:,0],[.025,.975]).tolist(),'f90':np.quantile(br[:,1],[.025,.975]).tolist(),'f10_minus_f90':np.quantile(br[:,2],[.025,.975]).tolist()}
+          cross=[]
+          for r in range(3):
+              tr=[j for j in range(3) if j!=r]; Ub=X[[G['u19'][j] for j in tr]].mean(1).to_numpy(); Tb=X[[G['t19'][j] for j in tr]].mean(1).to_numpy(); d=Tb-Ub; q=float(d@d)
+              for g in G:
+                  cross.append([r+1,g,float((X[G[g][r]].to_numpy()-Ub)@d/q)])
+          cdf=pd.DataFrame(cross,columns=['replicate','condition','memory_index']); cdf.to_csv(O/'crossfitted_memory_axis.csv',index=False)
+          V=X.var(1).nlargest(min(1000,len(X))).index; A=X.loc[V,used].T; Z=(A-A.mean())/A.std(ddof=1).replace(0,1); p=PCA(2,random_state=20261017); pc=p.fit_transform(Z)
+          rev={s:g for g,ss in G.items() for s in ss}; pdf=pd.DataFrame({'sample':used,'condition':[rev[s] for s in used],'PC1':pc[:,0],'PC2':pc[:,1]}); pdf.to_csv(O/'pca_coordinates.csv',index=False)
+          def tidy(url):
+              d=pd.read_csv(url); gene='target_id'; return d[[gene,'b','qval']].rename(columns={gene:'gene'}).dropna()
+          a=tidy(B+'exp2_rna_t19ut19_sleuth_wald_v2.csv'); b=tidy(B+'exp2_rna_t19f90_sleuth_wald.csv'); J=a.merge(b,on='gene',suffixes=('_train','_forget'))
+          x=J.b_train.to_numpy(float); y=J.b_forget.to_numpy(float); cosine=float(x@y/(np.linalg.norm(x)*np.linalg.norm(y))); rho,p_rho=spearmanr(x,y)
+          sig=J[J.qval_train<.05].copy(); n=len(sig); same=int((np.sign(sig.b_train)==np.sign(sig.b_forget)).sum()); signp=float(binomtest(same,n,.5,alternative='greater').pvalue) if n else None
+          ratio=float(np.median(np.abs(sig.b_forget)/(np.abs(sig.b_train)+1e-12))) if n else None
+          w2=sig.b_train.to_numpy(float)**2
+          neff=float(w2.sum()**2/(w2@w2)) if n and (w2@w2)>0 else None
+          es=np.sort(w2)[::-1]; cs=np.cumsum(es)/es.sum() if n else np.array([]); n50=int(np.searchsorted(cs,.5)+1) if n else None; n80=int(np.searchsorted(cs,.8)+1) if n else None
+          # vectorized gene-identity null for cosine, 1000 permutations
+          pn=1000; cnt=0
+          nx=np.linalg.norm(x); ny=np.linalg.norm(y)
+          for _ in range(pn):
+              yp=rng.permutation(y); cnt += (x@yp/(nx*ny) >= cosine)
+          pcos=float((cnt+1)/(pn+1))
+          J.to_csv(O/'gene_level_alignment.csv',index=False)
+          res={'source':'Rajan et al. Current Biology 2026 / Dryad 10.5061/dryad.z34tmpgrm','status':'retrospective public-data reanalysis, separate from prospective preregistration','original_matrix_shape':[int(X0.shape[0]),int(X0.shape[1])],'genes_analyzed':int(X.shape[0]),'mapped_columns':G,'memory_index':m,'bootstrap95':ci,'crossfitted_means':cdf.groupby('condition').memory_index.mean().to_dict(),'pca_variance':p.explained_variance_ratio_.tolist(),'alignment':{'common_genes':int(len(J)),'training_q_lt_0.05':int(n),'cosine':cosine,'cosine_permutation_p':pcos,'spearman_rho':float(rho),'spearman_p':float(p_rho),'same_direction_n':same,'same_direction_fraction':float(same/n) if n else None,'same_direction_binomial_p':signp,'median_abs_t19_minus_f90_over_t19_minus_untrained':ratio,'effective_number_of_training_effect_genes':neff,'genes_for_50pct_effect_energy':n50,'genes_for_80pct_effect_energy':n80}}
+          (O/'results.json').write_text(json.dumps(res,indent=2)); print(json.dumps(res,indent=2))
+          PY
+          python /tmp/analyze.py
+      - name: Commit outputs
+        shell: bash
+        run: |
+          git pull --rebase origin prereg-stentor-aneural-consciousness-2026-10-16
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add retrospective_stentor_omics_fast
+          git commit -m 'Add public Stentor omics retrospective validation' || exit 0
+          git push origin HEAD:prereg-stentor-aneural-consciousness-2026-10-16
