@@ -1,0 +1,212 @@
+name: Temporary public Stentor omics validation 20261017
+
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp_public_stentor_omics_validation_20261017.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prereg-stentor-aneural-consciousness-2026-10-16
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy pandas scipy scikit-learn
+      - name: Analyze public Stentor learning and forgetting transcriptomics
+        shell: bash
+        run: |
+          mkdir -p retrospective_stentor_omics
+          cat > /tmp/analyze_stentor.py <<'PY'
+          import json, itertools, math
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from scipy.stats import spearmanr, binomtest
+          from sklearn.decomposition import PCA
+
+          OUT = Path('retrospective_stentor_omics')
+          BASE = 'https://raw.githubusercontent.com/aralbright/2025_stentor_learning/main/exp2/'
+          OBS = BASE + 'exp2_rna_no0_sleuth_obsnorm.csv'
+          TRAIN = BASE + 'exp2_rna_t19ut19_sleuth_wald_v2.csv'
+          FORGET = BASE + 'exp2_rna_t19f90_sleuth_wald.csv'
+
+          # Published sample map from Dryad DOI 10.5061/dryad.z34tmpgrm.
+          expected = {
+              't19': ['DR4876_01','DR4876_04','DR4876_07'],
+              'u19': ['DR4876_03','DR4876_06','DR4876_09'],
+              'f10': ['DR4876_10','DR4876_12','DR4876_14'],
+              'f90': ['DR4876_16','DR4876_18','DR4876_20'],
+          }
+
+          Xraw = pd.read_csv(OBS, index_col=0)
+          Xraw = Xraw.apply(pd.to_numeric, errors='coerce')
+          Xraw = Xraw.loc[:, Xraw.notna().any(axis=0)]
+          cols = list(map(str, Xraw.columns))
+
+          def find_col(sample):
+              if sample in cols:
+                  return sample
+              # tolerate prefixes/suffixes added by sleuth
+              suffix = sample.split('_')[-1]
+              cand = [c for c in cols if sample in c or c.endswith('_'+suffix) or c.endswith(suffix)]
+              if len(cand)==1:
+                  return cand[0]
+              raise RuntimeError(f'Could not uniquely map {sample}; columns={cols}')
+
+          groups = {g:[find_col(s) for s in ss] for g,ss in expected.items()}
+          used = sum(groups.values(), [])
+          Xraw = Xraw[used].replace([np.inf,-np.inf],np.nan).fillna(0.0)
+          # Conservative expression filter and variance filter.
+          keep = (Xraw.mean(axis=1) >= 1.0) & (Xraw.var(axis=1) > 0)
+          X = np.log1p(Xraw.loc[keep])
+
+          # Full-data learning axis: untrained=0, trained=1 by construction.
+          mu_u = X[groups['u19']].mean(axis=1).to_numpy()
+          mu_t = X[groups['t19']].mean(axis=1).to_numpy()
+          delta = mu_t - mu_u
+          denom = float(np.dot(delta, delta))
+          if denom <= 0: raise RuntimeError('Degenerate learning axis')
+          def memory_index(cols_):
+              mu = X[cols_].mean(axis=1).to_numpy()
+              return float(np.dot(mu-mu_u, delta)/denom)
+          m_full = {g:memory_index(c) for g,c in groups.items()}
+
+          # Biological-replicate bootstrap: re-estimate learning axis and forgetting projections.
+          rng = np.random.default_rng(20261017)
+          boots=[]
+          B=10000
+          for b in range(B):
+              idx={g:rng.integers(0,3,3) for g in groups}
+              muub = X[[groups['u19'][i] for i in idx['u19']]].mean(axis=1).to_numpy()
+              mutb = X[[groups['t19'][i] for i in idx['t19']]].mean(axis=1).to_numpy()
+              db=mutb-muub; den=float(np.dot(db,db))
+              if den<=1e-15: continue
+              row={}
+              for g in ['f10','f90']:
+                  mug=X[[groups[g][i] for i in idx[g]]].mean(axis=1).to_numpy()
+                  row[g]=float(np.dot(mug-muub,db)/den)
+              row['f10_minus_f90']=row['f10']-row['f90']
+              boots.append(row)
+          boot=pd.DataFrame(boots)
+          ci={}
+          for c in boot.columns:
+              ci[c]=[float(boot[c].quantile(.025)),float(boot[c].quantile(.975))]
+
+          # Cross-fitted axis: train on 2 replicate pairs, score held-out replicate and corresponding forgetting samples.
+          cross=[]
+          for r in range(3):
+              train=[j for j in range(3) if j!=r]
+              ucols=[groups['u19'][j] for j in train]; tcols=[groups['t19'][j] for j in train]
+              u0=X[ucols].mean(axis=1).to_numpy(); t0=X[tcols].mean(axis=1).to_numpy(); d=t0-u0
+              den=float(np.dot(d,d))
+              for g in ['u19','t19','f10','f90']:
+                  x=X[groups[g][r]].to_numpy()
+                  cross.append({'replicate':r+1,'condition':g,'memory_index':float(np.dot(x-u0,d)/den)})
+          crossdf=pd.DataFrame(cross)
+          crossdf.to_csv(OUT/'crossfitted_memory_axis.csv',index=False)
+
+          # PCA on top 1,000 variable expressed genes for visualization only.
+          nvar=min(1000, X.shape[0])
+          v=X.var(axis=1).nlargest(nvar).index
+          Xm=X.loc[v,used].T
+          Z=(Xm-Xm.mean(axis=0))/(Xm.std(axis=0,ddof=1).replace(0,1))
+          pcs=PCA(n_components=2, random_state=20261017).fit_transform(Z)
+          pcadf=pd.DataFrame({'sample':used,'PC1':pcs[:,0],'PC2':pcs[:,1]})
+          rev={c:g for g,cs in groups.items() for c in cs}
+          pcadf['condition']=pcadf['sample'].map(rev)
+          pcadf.to_csv(OUT/'pca_coordinates.csv',index=False)
+
+          # Published differential contrasts: identity-specific reversal/alignment.
+          tr=pd.read_csv(TRAIN)
+          fr=pd.read_csv(FORGET)
+          def tidy(df):
+              # first unnamed index column is harmless
+              gene='target_id' if 'target_id' in df.columns else df.columns[1]
+              out=df[[gene,'b','qval']].copy()
+              out.columns=['gene','b','qval']
+              return out.dropna()
+          tr=tidy(tr); fr=tidy(fr)
+          J=tr.merge(fr,on='gene',suffixes=('_train','_forget'))
+          a=J['b_train'].to_numpy(float); b=J['b_forget'].to_numpy(float)
+          cosine=float(np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b)))
+          rho,p_rho=spearmanr(a,b)
+          sig=J[J.qval_train<0.05].copy()
+          same=int(np.sum(np.sign(sig.b_train)==np.sign(sig.b_forget)))
+          nsig=int(len(sig))
+          sign_p=float(binomtest(same,nsig,0.5,alternative='greater').pvalue) if nsig else None
+          # Fraction of training-effect energy retained in the trained-vs-90-min-forgetting contrast.
+          # 0 = f90 remains trained; 1 = f90 approaches the untrained state at training-effect magnitude.
+          attenuation=float(np.median(np.abs(sig.b_forget)/(np.abs(sig.b_train)+1e-12))) if nsig else None
+          # Distributedness of the significant training effect.
+          w=sig.b_train.to_numpy(float) if nsig else np.array([])
+          w2=w*w
+          neff=float((w2.sum()**2)/(np.sum(w2*w2))) if nsig and np.sum(w2*w2)>0 else None
+          if nsig:
+              e=np.sort(w2)[::-1]; cs=np.cumsum(e)/e.sum()
+              n50=int(np.searchsorted(cs,.5)+1); n80=int(np.searchsorted(cs,.8)+1)
+          else: n50=n80=None
+
+          # Gene-identity permutation for cosine and rank alignment; fixed seed.
+          perms=10000
+          cosnull=np.empty(perms); rhonull=np.empty(perms)
+          for i in range(perms):
+              bp=rng.permutation(b)
+              cosnull[i]=np.dot(a,bp)/(np.linalg.norm(a)*np.linalg.norm(bp))
+              rhonull[i]=spearmanr(a,bp).statistic
+          p_cos=float((1+np.sum(cosnull>=cosine))/(perms+1))
+          p_rho_perm=float((1+np.sum(rhonull>=rho))/(perms+1))
+
+          J[['gene','b_train','qval_train','b_forget','qval_forget']].to_csv(OUT/'gene_level_training_forgetting_alignment.csv',index=False)
+
+          results={
+            'source':{
+              'study':'Rajan et al., Molecular pathways for learning in the single-cell Stentor coeruleus, Current Biology (2026)',
+              'dryad_doi':'10.5061/dryad.z34tmpgrm',
+              'github':'aralbright/2025_stentor_learning',
+              'analysis_status':'retrospective public-data reanalysis; not part of prospective preregistration'
+            },
+            'matrix_shape_original':[int(Xraw.shape[0]),int(Xraw.shape[1])],
+            'genes_after_expression_filter':int(X.shape[0]),
+            'mapped_columns':groups,
+            'full_learning_axis_memory_index':m_full,
+            'bootstrap_95pct_CI':ci,
+            'crossfitted_condition_means':crossdf.groupby('condition').memory_index.mean().to_dict(),
+            'pca_explained_variance_ratio':PCA(n_components=2, random_state=20261017).fit(Z).explained_variance_ratio_.tolist(),
+            'differential_alignment':{
+              'genes_common':int(len(J)),
+              'training_q_lt_0_05':nsig,
+              'cosine_training_vs_t19_minus_f90':cosine,
+              'cosine_gene_identity_permutation_p':p_cos,
+              'spearman_rho':float(rho),
+              'spearman_asymptotic_p':float(p_rho),
+              'spearman_gene_identity_permutation_p':p_rho_perm,
+              'same_direction_among_training_significant':same,
+              'same_direction_fraction':float(same/nsig) if nsig else None,
+              'same_direction_binomial_p':sign_p,
+              'median_abs_forgetting_contrast_over_training_contrast':attenuation,
+              'effective_number_of_training_effect_genes':neff,
+              'genes_for_50pct_training_effect_energy':n50,
+              'genes_for_80pct_training_effect_energy':n80
+            }
+          }
+          (OUT/'results.json').write_text(json.dumps(results,indent=2))
+          print(json.dumps(results,indent=2))
+          PY
+          python /tmp/analyze_stentor.py
+      - name: Commit analysis outputs
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add retrospective_stentor_omics
+          git commit -m 'Add retrospective public Stentor omics validation outputs' || exit 0
+          git push origin HEAD:prereg-stentor-aneural-consciousness-2026-10-16
