@@ -1,0 +1,59 @@
+{
+  "within_time_line_concordance": {
+    "4dpi": {
+      "common": 28160,
+      "spearman": 0.33586481138681384,
+      "spearman_p": 0.0,
+      "fdr_a": 152,
+      "fdr_b": 3418,
+      "fdr_overlap": 71,
+      "same_direction_overlap": 71,
+      "same_direction_fraction_overlap": 1.0,
+      "overlap_hypergeom_p": 5.256913317009804e-26,
+      "interaction_fdr_lt_0_05": 69,
+      "interaction_p_lt_0_05": 2008,
+      "median_abs_interaction_lfc": 0.18958274767994723,
+      "design_columns": "Intercept;line[T.L15];infected[T.mock];line[T.L15]:infected[T.mock]"
+    },
+    "28dpi": {
+      "common": 23142,
+      "spearman": 0.19757992811157554,
+      "spearman_p": 2.1644625928797834e-202,
+      "fdr_a": 3,
+      "fdr_b": 255,
+      "fdr_overlap": 2,
+      "same_direction_overlap": 2,
+      "same_direction_fraction_overlap": 1.0,
+      "overlap_hypergeom_p": 0.0003601927685475414,
+      "interaction_fdr_lt_0_05": 1,
+      "interaction_p_lt_0_05": 487,
+      "median_abs_interaction_lfc": 0.26832262927782624,
+      "design_columns": "Intercept;line[T.L15];infected[T.mock];line[T.L15]:infected[T.mock]"
+    }
+  },
+  "within_line_cross_time_concordance": {
+    "L11": {
+      "common": 21428,
+      "spearman": -0.12925797994483343,
+      "spearman_p": 1.7111157860059892e-80,
+      "fdr_a": 137,
+      "fdr_b": 3,
+      "fdr_overlap": 0,
+      "same_direction_overlap": 0,
+      "same_direction_fraction_overlap": null,
+      "overlap_hypergeom_p": 1.0
+    },
+    "L15": {
+      "common": 21424,
+      "spearman": -0.0949560411055527,
+      "spearman_p": 4.202825796543656e-44,
+      "fdr_a": 2877,
+      "fdr_b": 252,
+      "fdr_overlap": 52,
+      "same_direction_overlap": 13,
+      "same_direction_fraction_overlap": 0.25,
+      "overlap_hypergeom_p": 0.0009453920657409587
+    }
+  },
+  "interpretation_note": "Line-specific fits test biological-background robustness within each sequencing wave. Cross-time correlations remain cross-wave comparisons and cannot separate temporal biology from batch/acquisition differences."
+}
