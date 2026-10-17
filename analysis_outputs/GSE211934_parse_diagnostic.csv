@@ -1,0 +1,9 @@
+gsm,file,id_column,count_column,rows
+GSM6505758,GSM6505758_DAneuron_control_1.txt.gz,Gene Symbol,sample_control_sample1,46388
+GSM6505759,GSM6505759_DAneuron_control_2.txt.gz,Gene Symbol,sample_control_sample2,46388
+GSM6505760,GSM6505760_DAneuron_virus_1.txt.gz,Gene Symbol,sample_Virus_0_1,46388
+GSM6505761,GSM6505761_DAneuron_virus_2.txt.gz,Gene Symbol,sample_virus_0_1,46388
+GSM6505762,GSM6505762_DAneuron_PFF_1.txt.gz,Gene Symbol,sample_PFF_sample1,46388
+GSM6505763,GSM6505763_DAneuron_PFF_2.txt.gz,Gene Symbol,sample_PFF_sample2,46388
+GSM6505764,GSM6505764_DAneuron_PFF_virus_1.txt.gz,Gene Symbol,sample_PFF_SARS_sample1,46388
+GSM6505765,GSM6505765_DAneuron_PFF_virus_2.txt.gz,Gene Symbol,sample_PFF_SARS_sample2,46388

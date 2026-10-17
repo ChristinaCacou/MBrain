@@ -1,4 +1,4 @@
-module,n_genes,genes_found,interaction_beta,p
-source_apoptosis_qpcr,0,,,
-source_autophagy_qpcr,0,,,
-dopaminergic_presynaptic_hypothesis,0,,,
+module,n_genes,genes_found,interaction_beta,se,t,p,df
+source_apoptosis_qpcr,4,FADD;BAX;BID;CASP9,0.3672062886023255,0.43470366704649177,0.8447278374650854,0.44582651198286444,4
+source_autophagy_qpcr,4,WDR45;TECPR2;MAP1LC3A;SQSTM1,0.4991464742453702,0.5101183253544858,0.9784915566373916,0.38323466383031585,4
+dopaminergic_presynaptic_hypothesis,8,TH;DDC;SLC18A2;SLC6A3;SNAP25;SYN1;SYT1;VAMP2,-0.719077441058714,0.49213367882091,-1.4611425147361028,0.2177751891875167,4

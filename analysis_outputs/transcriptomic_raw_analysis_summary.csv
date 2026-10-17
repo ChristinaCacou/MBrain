@@ -19,18 +19,18 @@ GSE225517,top_decile_same_direction_fraction,0.38177874186550975
 GSE225517,top_decile_sign_p,5.0163883629366234e-30
 GSE225517,analysis,raw counts; within-time log2CPM OLS adjusted for iPSC line; cross-time persistence uses within-time effects only
 GSE211934,dataset,GSE211934
-GSE211934,filtered_genes,25
+GSE211934,filtered_genes,21512
 GSE211934,gene_interaction_q_lt_0_05,0
-GSE211934,gene_interaction_p_lt_0_05,0
-GSE211934,interaction_abs_ge_1,0
-GSE211934,directional_amplification_up_all,1
-GSE211934,directional_amplification_down_all,2
-GSE211934,directional_amplification_up_both_effects_ge_0_5,0
-GSE211934,directional_amplification_down_both_effects_ge_0_5,0
+GSE211934,gene_interaction_p_lt_0_05,47
+GSE211934,interaction_abs_ge_1,13444
+GSE211934,directional_amplification_up_all,1523
+GSE211934,directional_amplification_down_all,969
+GSE211934,directional_amplification_up_both_effects_ge_0_5,195
+GSE211934,directional_amplification_down_both_effects_ge_0_5,54
 GSE211934,analysis,"raw counts; log2CPM factorial OLS virus + PFF + virus:PFF; n=2/cell, so gene-wise p/q are exploratory and module/effect-size interpretation is primary"
-GSE211934,module_source_apoptosis_qpcr_interaction_beta,
-GSE211934,module_source_apoptosis_qpcr_p,
-GSE211934,module_source_autophagy_qpcr_interaction_beta,
-GSE211934,module_source_autophagy_qpcr_p,
-GSE211934,module_dopaminergic_presynaptic_hypothesis_interaction_beta,
-GSE211934,module_dopaminergic_presynaptic_hypothesis_p,
+GSE211934,module_source_apoptosis_qpcr_interaction_beta,0.3672062886023255
+GSE211934,module_source_apoptosis_qpcr_p,0.44582651198286444
+GSE211934,module_source_autophagy_qpcr_interaction_beta,0.4991464742453702
+GSE211934,module_source_autophagy_qpcr_p,0.38323466383031585
+GSE211934,module_dopaminergic_presynaptic_hypothesis_interaction_beta,-0.719077441058714
+GSE211934,module_dopaminergic_presynaptic_hypothesis_p,0.2177751891875167

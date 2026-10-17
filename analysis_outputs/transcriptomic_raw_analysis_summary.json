@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-10-17T18:23:02.799522+00:00",
+  "generated_utc": "2026-10-17T18:24:58.253792+00:00",
   "GSE225517": {
     "dataset": "GSE225517",
     "common_filtered_genes": 23041,
@@ -23,37 +23,46 @@
   },
   "GSE211934": {
     "dataset": "GSE211934",
-    "filtered_genes": 25,
+    "filtered_genes": 21512,
     "gene_interaction_q_lt_0_05": 0,
-    "gene_interaction_p_lt_0_05": 0,
-    "interaction_abs_ge_1": 0,
-    "directional_amplification_up_all": 1,
-    "directional_amplification_down_all": 2,
-    "directional_amplification_up_both_effects_ge_0_5": 0,
-    "directional_amplification_down_both_effects_ge_0_5": 0,
+    "gene_interaction_p_lt_0_05": 47,
+    "interaction_abs_ge_1": 13444,
+    "directional_amplification_up_all": 1523,
+    "directional_amplification_down_all": 969,
+    "directional_amplification_up_both_effects_ge_0_5": 195,
+    "directional_amplification_down_both_effects_ge_0_5": 54,
     "analysis": "raw counts; log2CPM factorial OLS virus + PFF + virus:PFF; n=2/cell, so gene-wise p/q are exploratory and module/effect-size interpretation is primary"
   },
   "GSE211934_modules": [
     {
       "module": "source_apoptosis_qpcr",
-      "n_genes": 0,
-      "genes_found": "",
-      "interaction_beta": null,
-      "p": null
+      "n_genes": 4,
+      "genes_found": "FADD;BAX;BID;CASP9",
+      "interaction_beta": 0.3672062886023255,
+      "se": 0.43470366704649177,
+      "t": 0.8447278374650854,
+      "p": 0.44582651198286444,
+      "df": 4
     },
     {
       "module": "source_autophagy_qpcr",
-      "n_genes": 0,
-      "genes_found": "",
-      "interaction_beta": null,
-      "p": null
+      "n_genes": 4,
+      "genes_found": "WDR45;TECPR2;MAP1LC3A;SQSTM1",
+      "interaction_beta": 0.4991464742453702,
+      "se": 0.5101183253544858,
+      "t": 0.9784915566373916,
+      "p": 0.38323466383031585,
+      "df": 4
     },
     {
       "module": "dopaminergic_presynaptic_hypothesis",
-      "n_genes": 0,
-      "genes_found": "",
-      "interaction_beta": null,
-      "p": null
+      "n_genes": 8,
+      "genes_found": "TH;DDC;SLC18A2;SLC6A3;SNAP25;SYN1;SYT1;VAMP2",
+      "interaction_beta": -0.719077441058714,
+      "se": 0.49213367882091,
+      "t": -1.4611425147361028,
+      "p": 0.2177751891875167,
+      "df": 4
     }
   ]
 }
