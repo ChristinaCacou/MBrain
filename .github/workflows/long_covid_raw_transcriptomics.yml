@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/long_covid_raw_transcriptomics.yml'
       - 'analysis/long_covid_raw_transcriptomics.py'
+      - 'analysis/long_covid_raw_transcriptomics_v2.py'
 
 permissions:
   contents: write
@@ -26,7 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy pandas scipy
       - name: Run raw-count analyses
-        run: python analysis/long_covid_raw_transcriptomics.py
+        run: python analysis/long_covid_raw_transcriptomics_v2.py
       - name: Commit compact analysis outputs
         run: |
           git config user.name 'github-actions[bot]'
