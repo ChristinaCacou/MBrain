@@ -1,0 +1,59 @@
+{
+  "generated_utc": "2026-10-17T18:23:02.799522+00:00",
+  "GSE225517": {
+    "dataset": "GSE225517",
+    "common_filtered_genes": 23041,
+    "sig_FDR_4dpi": 2194,
+    "sig_FDR_28dpi": 35,
+    "sig_both": 5,
+    "overlap_hypergeom_p": 0.23683455681729212,
+    "jaccard_sig": 0.0022482014388489208,
+    "same_direction_both": 1,
+    "same_direction_fraction_both": 0.2,
+    "sign_concordance_p_both": 0.375,
+    "spearman_effect_all": -0.1529930414330997,
+    "spearman_effect_all_p": 1.101050980685963e-120,
+    "spearman_effect_overlap": -0.6,
+    "spearman_effect_overlap_p": 0.28475697986529386,
+    "top_decile_n": 2305,
+    "top_decile_same_direction": 880,
+    "top_decile_same_direction_fraction": 0.38177874186550975,
+    "top_decile_sign_p": 5.0163883629366234e-30,
+    "analysis": "raw counts; within-time log2CPM OLS adjusted for iPSC line; cross-time persistence uses within-time effects only"
+  },
+  "GSE211934": {
+    "dataset": "GSE211934",
+    "filtered_genes": 25,
+    "gene_interaction_q_lt_0_05": 0,
+    "gene_interaction_p_lt_0_05": 0,
+    "interaction_abs_ge_1": 0,
+    "directional_amplification_up_all": 1,
+    "directional_amplification_down_all": 2,
+    "directional_amplification_up_both_effects_ge_0_5": 0,
+    "directional_amplification_down_both_effects_ge_0_5": 0,
+    "analysis": "raw counts; log2CPM factorial OLS virus + PFF + virus:PFF; n=2/cell, so gene-wise p/q are exploratory and module/effect-size interpretation is primary"
+  },
+  "GSE211934_modules": [
+    {
+      "module": "source_apoptosis_qpcr",
+      "n_genes": 0,
+      "genes_found": "",
+      "interaction_beta": null,
+      "p": null
+    },
+    {
+      "module": "source_autophagy_qpcr",
+      "n_genes": 0,
+      "genes_found": "",
+      "interaction_beta": null,
+      "p": null
+    },
+    {
+      "module": "dopaminergic_presynaptic_hypothesis",
+      "n_genes": 0,
+      "genes_found": "",
+      "interaction_beta": null,
+      "p": null
+    }
+  ]
+}
