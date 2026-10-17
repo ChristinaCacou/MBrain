@@ -9,6 +9,7 @@ on:
       - 'analysis/long_covid_raw_transcriptomics_v2.py'
       - 'analysis/long_covid_raw_transcriptomics_v3.py'
       - 'analysis/long_covid_pydeseq2.py'
+      - 'analysis/gse225517_line_sensitivity.py'
 
 permissions:
   contents: write
@@ -32,12 +33,13 @@ jobs:
         run: |
           python analysis/long_covid_raw_transcriptomics_v3.py
           python analysis/long_covid_pydeseq2.py
+          python analysis/gse225517_line_sensitivity.py
       - name: Commit compact analysis outputs
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add analysis_outputs
-          git commit -m 'Add PyDESeq2 and exact-permutation raw-count results' || exit 0
+          git commit -m 'Add iPSC-line robustness to raw-count results' || exit 0
           git push origin analysis-long-covid-transcriptomics
       - name: Upload complete analysis outputs
         uses: actions/upload-artifact@v4
