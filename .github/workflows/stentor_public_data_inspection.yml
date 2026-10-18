@@ -1,4 +1,4 @@
-name: Stentor public behavioral data inspection
+name: Analyze public Stentor cell-level behavior
 on:
   push:
     branches: [stentor-open-data-audit-20261017]
@@ -6,34 +6,72 @@ on:
 permissions:
   contents: read
 jobs:
-  inspect:
+  extract:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: julia-actions/setup-julia@v2
         with:
-          python-version: '3.11'
-      - name: Fetch publicly released Stentor observations
+          version: '1.11'
+      - name: Obtain public Git LFS file only
         shell: bash
         run: |
           set -e
           git lfs install
-          git clone --depth 1 https://github.com/tejasramdas/stentor_habituation.git /tmp/stentor
+          GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/tejasramdas/stentor_habituation.git /tmp/stentor
           cd /tmp/stentor
-          git lfs pull --include="processed_data/collated.jld2"
-          ls -lh processed_data/collated.jld2
-          python -m pip install --quiet h5py numpy
-          python - <<'PY'
-          import h5py, numpy as np, json, os
-          p='processed_data/collated.jld2'
-          print('HDF5:',h5py.is_hdf5(p),'SIZE',os.path.getsize(p))
-          if h5py.is_hdf5(p):
-            with h5py.File(p) as f:
-              def explore(name,obj):
-                if isinstance(obj,h5py.Dataset):
-                  print('DATASET',name,'shape',obj.shape,'dtype',str(obj.dtype),'sample',repr(obj[()] if obj.size<=8 else obj[()].flat[:3].tolist())[:320])
-                elif isinstance(obj,h5py.Group):
-                  print('GROUP',name,'attrs',list(obj.attrs.keys()))
-              f.visititems(explore)
-          PY
+          git lfs pull --include="processed_data/collated.jld2" --exclude=""
+          sha256sum processed_data/collated.jld2
+      - name: Extract true observed cell outcomes
+        shell: bash
+        run: |
+          julia --startup-file=no -e 'using Pkg; Pkg.add("JLD2")'
+          cat >/tmp/extract.jl <<'JULIA'
+          using JLD2, Statistics
+          data=JLD2.load("/tmp/stentor/processed_data/collated.jld2")["data"]
+          println("CONDITIONS ",length(keys(data)))
+          mkpath("empirical_data")
+          open("empirical_data/stentor_cell_response.csv","w") do io
+            println(io,"condition,folder_id,cell_id,stimulus_index,response,record_type")
+            for cond in sort(collect(keys(data)))
+              d=data[cond]
+              println("COND ",cond," KEYS ",join(collect(keys(d)),","))
+              if haskey(d,"annots_filt")
+                for (j,mat) in enumerate(d["annots_filt"])
+                  fold=string(d["folders"][j])
+                  for cell in axes(mat,2), st in axes(mat,1)
+                    y=mat[st,cell]
+                    if isfinite(y)
+                      println(io,join((cond,fold,cell,st,Int(round(y)),"raw"),","))
+                    end
+                  end
+                end
+              end
+            end
+          end
+          open("empirical_data/stentor_processed_cell_response.csv","w") do io
+            println(io,"condition,cell_id,stimulus_index,response")
+            for cond in sort(collect(keys(data)))
+              d=data[cond]
+              if haskey(d,"control_data")
+                m=d["control_data"]
+                println("SAMP ",cond," SHAPE ",size(m)," block0 ",round(mean(m[1,:]),digits=3),"block1 ",round(mean(m[60,:]),digits=3),"block2start ",round(mean(m[61,:]),digits=3))
+                for cell in axes(m,2), st in axes(m,1)
+                  y=m[st,cell]
+                  if isfinite(y)
+                    println(io,join((cond,cell,st,Int(round(y))),","))
+                  end
+                end
+              end
+            end
+          end
+          JULIA
+          julia --startup-file=no /tmp/extract.jl
+          gzip -9 empirical_data/*.csv
+          ls -lh empirical_data/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stentor-public-behavioral-export
+          path: empirical_data/*.gz
+          retention-days: 2
