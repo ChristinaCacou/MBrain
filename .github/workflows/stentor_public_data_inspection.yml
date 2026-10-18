@@ -1,0 +1,39 @@
+name: Stentor public behavioral data inspection
+on:
+  push:
+    branches: [stentor-open-data-audit-20261017]
+    paths: ['.github/workflows/stentor_public_data_inspection.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fetch publicly released Stentor observations
+        shell: bash
+        run: |
+          set -e
+          git lfs install
+          git clone --depth 1 https://github.com/tejasramdas/stentor_habituation.git /tmp/stentor
+          cd /tmp/stentor
+          git lfs pull --include="processed_data/collated.jld2"
+          ls -lh processed_data/collated.jld2
+          python -m pip install --quiet h5py numpy
+          python - <<'PY'
+          import h5py, numpy as np, json, os
+          p='processed_data/collated.jld2'
+          print('HDF5:',h5py.is_hdf5(p),'SIZE',os.path.getsize(p))
+          if h5py.is_hdf5(p):
+            with h5py.File(p) as f:
+              def explore(name,obj):
+                if isinstance(obj,h5py.Dataset):
+                  print('DATASET',name,'shape',obj.shape,'dtype',str(obj.dtype),'sample',repr(obj[()] if obj.size<=8 else obj[()].flat[:3].tolist())[:320])
+                elif isinstance(obj,h5py.Group):
+                  print('GROUP',name,'attrs',list(obj.attrs.keys()))
+              f.visititems(explore)
+          PY
