@@ -1,0 +1,103 @@
+{
+  "date": "2026-10-19",
+  "classification": "Computational rerun, not independent biological validation",
+  "frozen_analysis_sha256": "7b319877eb749736c51fc302637cd0dc49cdc1b460310a3354b5955d96701151",
+  "central_rerun_exactly_matches_archived_all_fields": true,
+  "causal_rerun_exactly_matches_archived_all_fields": true,
+  "paired_conditions": [
+    {
+      "condition": "common_driver",
+      "n_sham_cells": 96,
+      "primary_base_mean": 6.610755314186016,
+      "primary_hab_mean": 6.061377709896866,
+      "paired_dz": -1.0616751941332438,
+      "primary_p": 2.289466138198341e-17,
+      "cross_modal_auc": 0.8421223958333334,
+      "cross_modal_perm_p": 0.0004997501249375,
+      "cross_modal_boot_ci_low": 0.7873209635416666,
+      "mean_heldout_delta_log_score": 0.6795835991691538,
+      "model_score_signflip_p": 0.0004997501249375,
+      "model_score_boot_ci_low": 0.5113676667320585,
+      "pass_geometry": true,
+      "pass_crossmodal": true,
+      "pass_predictive": true,
+      "all_three": true
+    },
+    {
+      "condition": "no_change",
+      "n_sham_cells": 96,
+      "primary_base_mean": 6.610755314186016,
+      "primary_hab_mean": 6.6123321910769945,
+      "paired_dz": 0.0044902934775305,
+      "primary_p": 0.9650001659610952,
+      "cross_modal_auc": 0.4931640624999999,
+      "cross_modal_perm_p": 0.5577211394302849,
+      "cross_modal_boot_ci_low": 0.4198866102430556,
+      "mean_heldout_delta_log_score": -0.0018677006845828,
+      "model_score_signflip_p": 0.5792103948025987,
+      "model_score_boot_ci_low": -0.0389971690963427,
+      "pass_geometry": false,
+      "pass_crossmodal": false,
+      "pass_predictive": false,
+      "all_three": false
+    }
+  ],
+  "causal_conditions": [
+    {
+      "scenario": "common_cause",
+      "n_campaigns": 4000,
+      "days": 12,
+      "cells_per_arm_day": 20,
+      "expected_intervention_effect": 0.0,
+      "mean_estimate": -0.0016663301394437,
+      "sd_estimate": 0.0917774073623548,
+      "rejection_rate": 0.05075,
+      "avg_ci_coverage": 0.94925,
+      "first_campaign_effect": -0.1208224252285641,
+      "first_campaign_p": 0.2485860919802949
+    },
+    {
+      "scenario": "coupled",
+      "n_campaigns": 4000,
+      "days": 12,
+      "cells_per_arm_day": 20,
+      "expected_intervention_effect": 0.25,
+      "mean_estimate": 0.2490204841996632,
+      "sd_estimate": 0.0785199819608778,
+      "rejection_rate": 0.81375,
+      "avg_ci_coverage": 0.95175,
+      "first_campaign_effect": 0.3834154812978527,
+      "first_campaign_p": 0.0005327092598924
+    },
+    {
+      "scenario": "offtarget_common_cause",
+      "n_campaigns": 4000,
+      "days": 12,
+      "cells_per_arm_day": 20,
+      "expected_intervention_effect": 0.25,
+      "mean_estimate": 0.2476636766696901,
+      "sd_estimate": 0.0910170100497806,
+      "rejection_rate": 0.69225,
+      "avg_ci_coverage": 0.949,
+      "first_campaign_effect": 0.234260213719829,
+      "first_campaign_p": 0.010781084633824
+    }
+  ],
+  "analytic_gaussian_covariance_check": "pass",
+  "library_versions_checked": "v16 biological; v17 focused narrative",
+  "environment_versions": {
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scipy": "1.17.0",
+    "sklearn": "1.8.0",
+    "statsmodels": "0.14.6",
+    "matplotlib": "3.10.8"
+  },
+  "qualifications": [
+    "All four recording-day units are simulated for central counterexample",
+    "Some frozen gate p-values use cell-level inference, not exact four-day cluster-level testing",
+    "No preregistered Stentor biological validation was executed",
+    "No new RNA-seq control FASTQs were processed",
+    "Biological behavioural summary is secondary reanalysis of Doan et al."
+  ]
+}
