@@ -1,0 +1,5 @@
+<PARSED TEXT FOR SHEET: 1 / 1 TABS
+TAB NAME: Aneural_v18_intervention_reproduced.csv>index,scenario,n_campaigns,days,cells_per_arm_day,expected_intervention_effect,mean_estimate,sd_estimate,rejection_rate,avg_ci_coverage,first_campaign_effect,first_campaign_p
+0,common_cause,4000,12,20,0.0,-0.0016663301394437,0.0917774073623548,0.05075,0.94925,-0.1208224252285641,0.2485860919802949
+1,coupled,4000,12,20,0.25,0.2490204841996632,0.0785199819608778,0.81375,0.95175,0.3834154812978527,0.0005327092598924
+2,offtarget_common_cause,4000,12,20,0.25,0.2476636766696901,0.0910170100497806,0.69225,0.949,0.234260213719829,0.010781084633824
