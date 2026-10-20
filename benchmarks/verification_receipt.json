@@ -1,0 +1,18 @@
+{
+  "audit_type": "deterministic reproduction plus independent analytic covariance check",
+  "biological_data": "none",
+  "registered_sha256": "7b319877eb749736c51fc302637cd0dc49cdc1b460310a3354b5955d96701151",
+  "common_driver_three_gate_pass": true,
+  "no_change_three_gate_pass": false,
+  "replicated_auc": 0.8421223958333334,
+  "replicated_predictive_log_score": 0.6795835991691538,
+  "rejection_rates": {
+    "common_cause": 0.05075,
+    "coupled": 0.81375,
+    "offtarget_common_cause": 0.69225
+  },
+  "analytic_common_cause_and_directed_covariance": 0.6,
+  "python": "3.13.5",
+  "numpy": "2.3.5",
+  "pandas": "2.2.3"
+}
