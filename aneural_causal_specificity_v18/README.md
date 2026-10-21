@@ -18,7 +18,7 @@ Create Python environment containing `numpy pandas scipy scikit-learn statsmodel
 ```bash
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MPLBACKEND=Agg \
 python code/Supplementary_Code_6.py \
-  --locked code/Prospective_Stentor_Validation_Analysis.py --outdir replication
+  --locked code/Prospective_Stentor_Validation_Analysis.py --outdir code/replication
 python code/independent_audit.py
 ```
 
