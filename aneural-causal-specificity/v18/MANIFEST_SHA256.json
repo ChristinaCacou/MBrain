@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-21",
+  "source": "public auditable synthetic and public-data secondary reanalysis",
+  "frozen_SHA256": "7b319877eb749736c51fc302637cd0dc49cdc1b460310a3354b5955d96701151",
+  "files_sha256": {
+    "ExtendedData_Table13_run_level_habituation.csv": "460a2f8facbc2388c70030480f91bb2e104f6a6b693dd6a41ccc8d6b4126ba67",
+    "ExtendedData_Table13c_day_level_habituation.csv": "f90970162ce559cc75ae4547ff27c0c45b1809b2de12b19a18df51862bc41517",
+    "ExtendedData_Table8_common_driver_gates.csv": "4297a9c982f3517ac9e2a581aa82433f1db2dcdc1737bbf051569faaec86d4a9",
+    "README.md": "0f15411ce92d65a3154fb0b5def77722b2399820fa01c07b7226a71a4211800b",
+    "Supplementary_Code_1.py": "cd72890dbdd787cca5c788c226e8804efa1a869fe73e09f3aadd80009a35509e",
+    "Supplementary_Code_10.py": "fe1544859604f15a1e659810404727685258b96807d2d603a4d5f8037f29bd17",
+    "Supplementary_Code_16_source_reproducer.py": "f630a8e31958ef99f93922b580b35ea76e958ab32f060dc86fe96a56e8f01f76",
+    "Supplementary_Code_2.py": "b42c76d0390addce54e9861332daa552235b23df097ca0e2a0be40703ccc328b",
+    "Supplementary_Code_3.py": "9996947c43a9586865582079d90629433b19c03d0c56e14444b00c697aac208d",
+    "Supplementary_Code_5.py": "9f18a7b237424997df06d61f541e6d950640a789df8294336985f84d3c4e3cc3",
+    "Supplementary_Code_6.py": "d661750d2788592bc1e12b53f891a149fd9ece4f518b10d3bee83bbfbb07cd2d",
+    "Supplementary_Code_7.py": "3d5ecdad501262be97ae0dcbb5b8accf918386c3fb373d12a96fd072bf3a1563",
+    "frozen_Prospective_Stentor_Validation_Analysis.py": "7b319877eb749736c51fc302637cd0dc49cdc1b460310a3354b5955d96701151",
+    "independent_audit_v18.json": "bbbfd40ecf5eb1820b6e4411d733aef7d2702308a63fe8dd1d5846e1bd9be4e6",
+    "independent_audit_v18.py": "e8c693ae4aea90b4b44bbd27955bb495faad2eac506becf54a168dc3667c2cac",
+    "previous_14genes.tsv": "0ed62de4ed0a3f414322668fcec2a5347bf5fd24c8739307906ef025cde57863",
+    "reproduce_all.py": "b168e59d16005d506fd807222bfee02f743b05bec33ad30f8607bbfcfd663ea8",
+    "requirements.txt": "00d3cc594bef25327bbbf61ac1ea82947a945522e67fb5395f1848b80539e7c8",
+    "stentor_public_reanalysis.py": "4f489e69e52c6381e2064e6e69455d266e415e3b2845ea0b22fb9165c45a138a"
+  }
+}
