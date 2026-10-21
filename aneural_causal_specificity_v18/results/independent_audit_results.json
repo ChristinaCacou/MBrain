@@ -1,0 +1,44 @@
+{
+  "input_sha256": "bca06b89e901a665f91cc66ac2444291e0260159d2ac6dc8903797f412971b7d",
+  "status": "synthetic numerical audit",
+  "positive_case": {
+    "n_cells": 96,
+    "baseline_dim": 6.610755314186016,
+    "post_dim": 6.061377709896866,
+    "paired_dz": -1.0616751941332438,
+    "paired_t_p": 2.2894661381983406e-17,
+    "mechanical_to_electrical_auc": 0.8421223958333334,
+    "heldout_mean_delta_log_score": 0.6795835991691547,
+    "day_means_electrical_dim": [
+      -0.505587672271353,
+      -0.5900868595039939,
+      -0.6718851095792333,
+      -0.42995077580202673
+    ],
+    "day_sign_flip_p_two_sided": 0.125,
+    "day_means_predictive": [
+      0.5930625536432204,
+      0.7952509331769478,
+      0.9003481300355544,
+      0.4296727798208963
+    ],
+    "day_predictive_sign_flip_p_two_sided": 0.125
+  },
+  "geometry_independent_trajectory_recomputation": {
+    "common_driver": {
+      "base": 6.610755314186016,
+      "hab": 6.061377709896866,
+      "paired_delta": -0.5493776042891517,
+      "paired_t_p": 2.2894661381983406e-17,
+      "n": 96
+    },
+    "no_change": {
+      "base": 6.610755314186016,
+      "hab": 6.6123321910769945,
+      "paired_delta": 0.0015768768909771764,
+      "paired_t_p": 0.9650001659610951,
+      "n": 96
+    }
+  },
+  "note": "P values of frozen pipeline are cell-level; day-level exact test differs. No consciousness or biological claim is made."
+}
