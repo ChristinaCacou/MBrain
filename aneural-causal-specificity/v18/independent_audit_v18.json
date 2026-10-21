@@ -1,0 +1,159 @@
+{
+  "scope": "synthetic, post-hoc diagnostic, not preregistered; no cells acquired",
+  "cases": [
+    {
+      "case": "common_driver",
+      "n_cells": 96,
+      "day_geometry": [
+        {
+          "replicate_day": "D1",
+          "mean": -0.505587672271353,
+          "count": 24
+        },
+        {
+          "replicate_day": "D2",
+          "mean": -0.5900868595039939,
+          "count": 24
+        },
+        {
+          "replicate_day": "D3",
+          "mean": -0.6718851095792333,
+          "count": 24
+        },
+        {
+          "replicate_day": "D4",
+          "mean": -0.42995077580202673,
+          "count": 24
+        }
+      ],
+      "primary_mean_geometry_delta": -0.5493776042891517,
+      "day_signflip_two_sided": 0.125,
+      "day_signflip_directional_decrease": 0.0625,
+      "day_signflip_support_n": 16,
+      "crossmodal_dayout": [
+        {
+          "day": "D1",
+          "n_electrical_rows": 48,
+          "auc": 0.8454861111111112
+        },
+        {
+          "day": "D2",
+          "n_electrical_rows": 48,
+          "auc": 0.8611111111111112
+        },
+        {
+          "day": "D3",
+          "n_electrical_rows": 48,
+          "auc": 0.8836805555555556
+        },
+        {
+          "day": "D4",
+          "n_electrical_rows": 48,
+          "auc": 0.7656250000000001
+        }
+      ],
+      "crossmodal_dayout_pooled_auc_mean": 0.8389756944444444,
+      "predictive_dayout": [
+        {
+          "day": "D1",
+          "n_cells": 24,
+          "mean_delta_log_score": 0.5930625536432204
+        },
+        {
+          "day": "D2",
+          "n_cells": 24,
+          "mean_delta_log_score": 0.7952509331769474
+        },
+        {
+          "day": "D3",
+          "n_cells": 24,
+          "mean_delta_log_score": 0.9003481300355509
+        },
+        {
+          "day": "D4",
+          "n_cells": 24,
+          "mean_delta_log_score": 0.4296727798208965
+        }
+      ],
+      "predictive_day_signflip_one_sided": 0.0625,
+      "predictive_day_signflip_support_n": 16
+    },
+    {
+      "case": "no_change",
+      "n_cells": 96,
+      "day_geometry": [
+        {
+          "replicate_day": "D1",
+          "mean": 0.0642763309665803,
+          "count": 24
+        },
+        {
+          "replicate_day": "D2",
+          "mean": -0.01074149503830594,
+          "count": 24
+        },
+        {
+          "replicate_day": "D3",
+          "mean": -0.17571532086216182,
+          "count": 24
+        },
+        {
+          "replicate_day": "D4",
+          "mean": 0.1284879924977962,
+          "count": 24
+        }
+      ],
+      "primary_mean_geometry_delta": 0.0015768768909771764,
+      "day_signflip_two_sided": 1.0,
+      "day_signflip_directional_decrease": 0.5625,
+      "day_signflip_support_n": 16,
+      "crossmodal_dayout": [
+        {
+          "day": "D1",
+          "n_electrical_rows": 48,
+          "auc": 0.6215277777777778
+        },
+        {
+          "day": "D2",
+          "n_electrical_rows": 48,
+          "auc": 0.47048611111111116
+        },
+        {
+          "day": "D3",
+          "n_electrical_rows": 48,
+          "auc": 0.3680555555555556
+        },
+        {
+          "day": "D4",
+          "n_electrical_rows": 48,
+          "auc": 0.5173611111111112
+        }
+      ],
+      "crossmodal_dayout_pooled_auc_mean": 0.4943576388888889,
+      "predictive_dayout": [
+        {
+          "day": "D1",
+          "n_cells": 24,
+          "mean_delta_log_score": 0.045854063137722965
+        },
+        {
+          "day": "D2",
+          "n_cells": 24,
+          "mean_delta_log_score": -0.0055754404123958086
+        },
+        {
+          "day": "D3",
+          "n_cells": 24,
+          "mean_delta_log_score": -0.05411962546085639
+        },
+        {
+          "day": "D4",
+          "n_cells": 24,
+          "mean_delta_log_score": 0.006370199997197752
+        }
+      ],
+      "predictive_day_signflip_one_sided": 0.625,
+      "predictive_day_signflip_support_n": 16
+    }
+  ]
+}
