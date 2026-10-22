@@ -1,0 +1,56 @@
+{
+  "common_driver": {
+    "num_trials": 384,
+    "num_virtual_cells": 96,
+    "n_days": 4,
+    "independent_eigenvalue_metric_max_abs_error": 8.881784197001252e-15,
+    "independent_paired_t_p": 2.2894661381983406e-17,
+    "reported_paired_t_p": 2.2894661381983406e-17,
+    "reported_auc": 0.8421223958333334,
+    "reported_mean_logscore_delta": 0.6795835991691538,
+    "reported_three_gate_decision": true,
+    "independent_auc_by_rank": 0.8421223958333334,
+    "max_auc_difference": 0.0
+  },
+  "no_change": {
+    "num_trials": 384,
+    "num_virtual_cells": 96,
+    "n_days": 4,
+    "independent_eigenvalue_metric_max_abs_error": 8.881784197001252e-15,
+    "independent_paired_t_p": 0.965000165961095,
+    "reported_paired_t_p": 0.9650001659610951,
+    "reported_auc": 0.49316406249999994,
+    "reported_mean_logscore_delta": -0.0018677006845828255,
+    "reported_three_gate_decision": false,
+    "independent_auc_by_rank": 0.4931640625,
+    "max_auc_difference": 5.551115123125783e-17
+  },
+  "causal_algebra": {
+    "common_cause_covariance": 0.6,
+    "coupled_covariance": 0.6,
+    "coupled_E_variance": 1.0,
+    "residual_variance": 0.5583333333333333,
+    "intervention_delta_E_common_cause": 0.0,
+    "intervention_delta_E_coupled": 0.25
+  },
+  "campaigns": {
+    "common_cause": {
+      "n_campaigns": 4000,
+      "calculated_rejection_rate": 0.05075,
+      "reported_rate": 0.05075,
+      "difference": 0.0
+    },
+    "coupled": {
+      "n_campaigns": 4000,
+      "calculated_rejection_rate": 0.81375,
+      "reported_rate": 0.81375,
+      "difference": 0.0
+    },
+    "offtarget_common_cause": {
+      "n_campaigns": 4000,
+      "calculated_rejection_rate": 0.69225,
+      "reported_rate": 0.69225,
+      "difference": 0.0
+    }
+  }
+}
