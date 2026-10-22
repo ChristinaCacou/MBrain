@@ -1,0 +1,64 @@
+{
+  "common_driver": {
+    "trial_metrics_independent_svd_max_abs_error": 1.1546319456101628e-14,
+    "n_cells": 96,
+    "primary_mean_independently_recomputed": -0.5493776042891517,
+    "day_mean_primary_differences": {
+      "D1": -0.505587672271353,
+      "D2": -0.5900868595039939,
+      "D3": -0.6718851095792333,
+      "D4": -0.42995077580202673
+    },
+    "day_level_exact_two_sided_signflip_p": 0.125,
+    "day_level_sign_resolution_n": 16,
+    "auc_recomputed": 0.8421223958333334,
+    "auc_by_day": {
+      "D1": 0.8454861111111112,
+      "D2": 0.8611111111111112,
+      "D3": 0.8854166666666666,
+      "D4": 0.7604166666666666
+    },
+    "constant_features": {
+      "effective_dimensionality": 384,
+      "lz76_norm": 9,
+      "compressed_complexity": 1
+    },
+    "compressed_complexity_variance": 0.0,
+    "n_days": 4,
+    "note": "The exact day sign-flip is a diagnostic sensitivity test under day-sign exchangeability, not a valid unconditional randomization test. Synthetic observations are not biological measurements."
+  },
+  "no_change": {
+    "trial_metrics_independent_svd_max_abs_error": 1.5987211554602254e-14,
+    "n_cells": 96,
+    "primary_mean_independently_recomputed": 0.0015768768909771764,
+    "day_mean_primary_differences": {
+      "D1": 0.0642763309665803,
+      "D2": -0.01074149503830594,
+      "D3": -0.17571532086216182,
+      "D4": 0.1284879924977962
+    },
+    "day_level_exact_two_sided_signflip_p": 1.0,
+    "day_level_sign_resolution_n": 16,
+    "auc_recomputed": 0.49316406249999994,
+    "auc_by_day": {
+      "D1": 0.6354166666666667,
+      "D2": 0.4652777777777778,
+      "D3": 0.3767361111111111,
+      "D4": 0.5121527777777777
+    },
+    "constant_features": {
+      "effective_dimensionality": 384,
+      "lz76_norm": 10,
+      "compressed_complexity": 1
+    },
+    "compressed_complexity_variance": 0.0,
+    "n_days": 4,
+    "note": "The exact day sign-flip is a diagnostic sensitivity test under day-sign exchangeability, not a valid unconditional randomization test. Synthetic observations are not biological measurements."
+  },
+  "paired_controls": {
+    "response_energy_baseline_max_abs_diff": 0.0,
+    "effective_dimensionality_baseline_max_abs_diff": 0.0,
+    "lz76_norm_baseline_max_abs_diff": 0.0,
+    "compressed_complexity_baseline_max_abs_diff": 0.0
+  }
+}
