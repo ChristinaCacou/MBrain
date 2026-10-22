@@ -1,39 +1,10 @@
-# Shared physiological drive can mimic cross-modal integration — reproducibility release v18
+# Shared physiological drive can mimic cross-modal integration
+## Version 18 — public computational reproducibility snapshot
 
-**Content types:** synthetic data, secondary biological summaries derived from cited public material, scripts, audit reports. No new biological measurements or unpublished human data.
+This folder is part of a PUBLIC source branch. All new simulation datasets are SYNTHETIC. There are no new Stentor biological measurements, and the registered prospective Stentor experiment remains unperformed.
 
-## 1. Environment
-Python 3.10+ with `numpy`, `scipy`, `pandas`, `matplotlib`, `scikit-learn`, `statsmodels`, `python-docx` (only to regenerate documents). Simulation scripts are standalone and use fixed RNG seeds.
-
-## 2. Original three-gate simulation
-`python src/Supplementary_Code_6.py --locked src/Prospective_Stentor_Validation_Analysis.py --outdir results/fresh_common_driver`
-
-This checks SHA256 of the frozen original analytic program `7b319877eb749736c51fc302637cd0dc49cdc1b460310a3354b5955d96701151`, generates 96 virtual cells across four simulated days, and runs the original analysis on both a shared physiological driver and a no-change control. It is post-registration exploratory simulation, **not** observed Stentor data or a completed prospectively registered experiment.
-
-## 3. Independent numerical recomputation
-`python src/independent_verification.py`
-
-The independent implementation recomputes dimension from stored trajectories in `data/common_driver` and `data/no_change` (for its original relative-path expectation, copy/symlink `data/` to `frozen_audit/`; see `verify_release.py`). The published audit finds a common-driver reduction from 6.610755 to 6.061378 and an exact two-sided four-day sign-flip P=0.125; the cell-level P value is far smaller due to nested pseudo-independent observations. An in-workflow second implementation is not independent human peer review.
-
-## 4. Analytic intervention benchmark
-`python src/Supplementary_Code_7.py --outdir results/fresh_causal_audit`
-
-This generates synthetic observationally equivalent structures and intervention outcomes. Expected observed rejection rates under its fixed-seed design: common cause 0.05075; directed transfer 0.81375; off-target common cause 0.69225. These are design-specific Monte Carlo frequencies, not empirical false positives.
-
-## 5. Independent biological dataset
-`src/Supplementary_Code_16_source_reproducer.py` checks the original public Doan et al. dataset and regenerates source-derived run/date analyses. Network access is needed to retrieve `https://github.com/nhithuydoan/associative_learning_Stentor/blob/main/data/dataset_followup_2.csv` (Git blob 04e271fab29e9f826f7d3a9dca9c4e9040c1dbfc). The reduced `data/ExtendedData_Table13*` summaries are reanalyses of source data, **not new wet-lab observations**.
-
-## 6. Provenance & limitations
-The original prospective Stentor protocol (public commit `07949d983493186d63d3232a546247476adae4bf`) remains unchanged and **unexecuted**. The larger 21-sample Rajan raw RNA-seq validation is **not** included: six time-matched untreated controls were not quantified. The separate independent Miao cohort was not quantified gene by gene. Figures in documents were generated from numerical inputs, not AI text-to-image generation.
-
-## 7. Claims and release policy
-The manuscript's novelty is limited to an executable adversarial failure of a **specified restricted comparator workflow**. Observational equivalence, pseudoreplication, and broad skepticism about plant-consciousness indicators are established prior art. All scripts were created/edited with assistance from OpenAI ChatGPT and require human scientific verification before submission. No external expert review is claimed. See `docs/Author_Submission_Checklist_v18.docx` for mandatory author signoff.
-
-## Archive integrity
-Every file listed in `MANIFEST_SHA256.txt` is hash-pinned. Do not include the separate private blinded-treatment key in a public source release.
-## Public GitHub branch execution
-
-Clone branch `aneural-causal-specificity-v18-reproducibility`, then run:
+### Reproduce the exact executable counterexample
+Clone the `aneural-causal-specificity-v18-reproducibility` branch of this repository and run:
 
 ```bash
 cd research/aneural-v18
@@ -41,4 +12,42 @@ python -m pip install numpy scipy pandas matplotlib scikit-learn statsmodels
 python run_public_replication_v18.py
 ```
 
-This command generates both synthetic cohorts into `src/frozen_audit/`, checks the frozen source hash, reruns the same three-gate analysis, recomputes effective dimensionality without importing that analysis, and runs the causal-intervention benchmark. The saved summaries under `results/` are source-audit receipts. Raw generated trajectories are reproduced by code rather than checked into the Git branch. The complete offline ZIP, including saved trajectories and immutable manifest, is provided as a separate manuscript reproducibility package. The Git branch is public but is **not itself peer review**.
+The runner generates 96 virtual cells across four simulated days for both common-driver and no-change conditions, verifies the unchanged analysis script against SHA-256 `7b319877eb749736c51fc302637cd0dc49cdc1b460310a3354b5955d96701151`, runs the original three-gate evaluation, recalculates dimensionality from saved synthetic trajectories with an independent numerical implementation, applies a four-day exact sign-flip sensitivity test, and repeats a separate 12,000-campaign causal-intervention simulation. Generated trajectories are *not* tracked in this Git branch, since they are deterministically rebuilt.
+
+### Selected expected numerical outputs (synthetic only)
+
+| Metric | Common-driver result |
+|---|---:|
+| Electrical participation ratio, BASE | 6.610755 |
+| Electrical participation ratio, HAB | 6.061378 |
+| Cross-modal AUC | 0.842122 |
+| Leave-day-out model advantage | 0.679584 |
+| Frozen cell-level paired P | 2.289×10⁻¹⁷ |
+| Four-day exact two-sided sign-flip P | 0.125 |
+| No-change cell-level P | 0.965 |
+
+The original three-gate procedure declares its *restricted scalar-gain null* rejected for the common-driver model and not rejected for the no-change control. Because there are only four independent simulated recording days, the exact sign-flip test cannot provide a two-sided P below 0.125. This is not biological validation and does not establish conscious or unconscious experience.
+
+The selective-intervention benchmark gives rejection rates 0.05075 under a valid common-cause null, 0.81375 under directed transfer, and 0.69225 under common cause with an off-target perturbation. These are MODEL-SPECIFIC Monte Carlo operating characteristics, not diagnostic rates in Stentor.
+
+### Contents
+
+- `src/Prospective_Stentor_Validation_Analysis.py` — unchanged hash-locked analysis from prior public preregistration
+- `src/Supplementary_Code_6.py` — common-driver and no-change generation plus frozen gate evaluation
+- `src/Supplementary_Code_7.py` — observational equivalence and intervention simulation
+- `src/independent_verification.py` — separate numerical participation-ratio implementation and exact four-day sign-flip check
+- `src/Supplementary_Code_16_source_reproducer.py` — published Stentor contraction data reanalysis, requires internet for public source CSV
+- `results/*.csv` — cached synthetic numerical results
+- `run_public_replication_v18.py` — reproducible one-command driver
+
+The full **offline author package** separately contains source files, generated trajectories, trial tables, figures, manuscripts, SHA-256 manifest and author-signoff documents. That ZIP is not hosted in this Git branch.
+
+### Data provenance and limits
+
+Original Stentor data are from Doan and colleagues' public repository [`dataset_followup_2.csv`](https://github.com/nhithuydoan/associative_learning_Stentor), Git blob `04e271fab29e9f826f7d3a9dca9c4e9040c1dbfc`. The original prospective study has prior public registration commit `07949d983493186d63d3232a546247476adae4bf`. The separately published Rajan RNA-seq tables do NOT contain the six time-matched untreated 10- and 90-minute controls used for molecular forgetting identification; those controls were not quantified in this project. Independent gene-level Miao replication is also unperformed.
+
+### Scientific novelty and attribution
+
+Observational equivalence, the need for selective interventions, pseudoreplication, and broad criticism of behavior-only consciousness indicators are established prior art. This project claims, narrowly, to construct an executable counterexample to mechanistic interpretation of a **particular predeclared three-gate workflow** with an insufficient comparator class. It does NOT prove that all markers of consciousness fail, or that Stentor is phenomenally unconscious.
+
+OpenAI ChatGPT assisted with source code, mathematical checking, writing and data processing. A separate computational reimplementation is not outside expert peer review. Human authors remain responsible for independently verifying the scientific content and making any journal submission. Do not redistribute a private blinded-treatment key.
