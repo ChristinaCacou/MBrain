@@ -1,0 +1,10 @@
+<PARSED TEXT FOR SHEET: 1 / 1 TABS
+TAB NAME: exclusion_restriction_sensitivity_v19.csv>index,offtarget_Q_shift_SD,population_E_shift,analytical_rejection_rate,mc_rejection_rate,mc_se,scenario
+0,0.0,0.0,0.05,0.0496,0.001535,no-transfer off-target Q shift
+1,0.05,0.038729833,0.067465,0.06605,0.001756,no-transfer off-target Q shift
+2,0.1,0.077459667,0.121417,0.1209,0.002305,no-transfer off-target Q shift
+3,0.2,0.154919334,0.341104,0.3441,0.003359,no-transfer off-target Q shift
+4,0.322748612,0.25,0.703524,0.70475,0.003226,no-transfer off-target Q shift
+5,0.4,0.309838668,0.870019,0.86985,0.002379,no-transfer off-target Q shift
+6,0.5,0.387298335,0.970612,0.9706,0.001194,no-transfer off-target Q shift
+7,,0.25,0.814301,,,selective directed M shift

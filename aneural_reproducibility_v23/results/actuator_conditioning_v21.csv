@@ -1,0 +1,6 @@
+<PARSED TEXT FOR SHEET: 1 / 1 TABS
+TAB NAME: actuator_conditioning_v21.csv>index,design,m1,b1,m2,b2,determinant,condition_number,SE_theta_analytic,MC_SD_theta,number_campaigns
+0,Separated,1,0.1,0.32,0.4,0.368,3.13903995689,0.0224081827479,0.022321795479,50000
+1,Moderately separated,1,0.1,0.8,0.2,0.12,14.0119657596,0.037267799625,0.0374133172182,50000
+2,Nearly parallel,1,0.1,0.8,0.081,0.001,1656.56039634,2.5737909783,2.5695018425,50000
+3,Exactly parallel,1,0.1,0.8,0.08,0.0,inf,,,0

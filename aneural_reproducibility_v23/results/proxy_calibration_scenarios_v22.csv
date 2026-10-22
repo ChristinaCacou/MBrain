@@ -1,0 +1,8 @@
+<PARSED TEXT FOR SHEET: 1 / 1 TABS
+TAB NAME: proxy_calibration_scenarios_v22.csv>index,case,w,error,D,loading,b_lower,b_upper,theta_lower,theta_upper,zero_directed_effect_compatible
+0,No proxy calibration,,,,,-0.35,0.35,-0.03850909316,0.3589279413,True
+1,Ideal unchanged proxy,0.0,0.02,0.0,0.8,-0.025,0.025,0.2383270559,0.2609430171,False
+2,Bounded proxy leakage,0.0,0.02,0.03,0.8,-0.0625,0.0625,0.2192808562,0.2761319879,False
+3,Larger allowable leakage,0.0,0.02,0.16,0.8,-0.225,0.225,0.1067131054,0.3287817751,False
+4,Proxy cannot exclude zero,0.0,0.02,0.24,0.8,-0.325,0.325,-0.003004543365,0.3534470212,True
+5,Nonzero proxy contrast,0.04,0.02,0.03,0.8,-0.0125,0.1125,0.1905298322,0.2555584024,False

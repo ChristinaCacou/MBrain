@@ -1,0 +1,8 @@
+<PARSED TEXT FOR SHEET: 1 / 1 TABS
+TAB NAME: proxy_plus_contrast_uncertainty_v22.csv>index,direct_proxy_shift_bound_D,b_lower,b_upper,theta_lower,theta_upper,zero_compatible
+0,0.0,-0.025,0.025,0.177489065,0.325127853,False
+1,0.03,-0.0625,0.0625,0.156386773,0.3380388421,False
+2,0.16,-0.225,0.225,0.03385761776,0.3823412226,False
+3,0.18,-0.25,0.25,0.00873265118,0.3878606997,False
+4,0.19,-0.2625,0.2625,-0.005451725716,0.3905167788,True
+5,0.24,-0.325,0.325,-0.09755147571,0.4028582913,True

@@ -1,0 +1,4 @@
+<PARSED TEXT FOR SHEET: 1 / 1 TABS
+TAB NAME: ExtendedData_Table8_common_driver_gates_rerun.csv>index,condition,n_sham_cells,primary_base_mean,primary_hab_mean,paired_dz,primary_p,cross_modal_auc,cross_modal_perm_p,cross_modal_boot_ci_low,mean_heldout_delta_log_score,model_score_signflip_p,model_score_boot_ci_low,pass_geometry,pass_crossmodal,pass_predictive,all_three
+0,common_driver,96,6.610755314186016,6.061377709896866,-1.0616751941332438,2.289466138198341e-17,0.8421223958333334,0.0004997501249375,0.7873209635416666,0.6795835991691538,0.0004997501249375,0.5113676667320585,True,True,True,True
+1,no_change,96,6.610755314186016,6.6123321910769945,0.0044902934775305,0.9650001659610952,0.4931640624999999,0.5577211394302849,0.4198866102430556,-0.0018677006845828,0.5792103948025987,-0.0389971690963427,False,False,False,False
