@@ -1,0 +1,37 @@
+{
+  "run_date": "2026-10-21",
+  "verification": "local rerun of saved source code (not external peer review)",
+  "frozen_analysis_sha256": "7b319877eb749736c51fc302637cd0dc49cdc1b460310a3354b5955d96701151",
+  "common_driver": {
+    "cells": 96,
+    "simulation_seed": 2026101706,
+    "numeric_fields_compared": 10,
+    "max_abs_error": 0,
+    "all_three_common_driver": true,
+    "all_three_no_change": false
+  },
+  "intervention": {
+    "simulation_seed": 2026101707,
+    "campaigns_each": 4000,
+    "scenarios": {
+      "common_cause": 0.05075,
+      "coupled": 0.81375,
+      "offtarget_common_cause": 0.69225
+    }
+  },
+  "algebra": {
+    "rho": 0.6,
+    "gamma": 0.25,
+    "directed_model_covariance": 0.6,
+    "directed_model_variance": 1,
+    "residual_variance": 0.5583333333333332
+  },
+  "biological_reanalysis": {
+    "original_source": "https://github.com/nhithuydoan/associative_learning_Stentor",
+    "source_blob": "04e271fab29e9f826f7d3a9dca9c4e9040c1dbfc",
+    "runs": 19,
+    "dates": 8,
+    "missing_RNA_controls_quantified": 0
+  },
+  "qualification": "synthetic claims only; no original Stentor wet-lab validation; no new RNA-seq quantification"
+}
