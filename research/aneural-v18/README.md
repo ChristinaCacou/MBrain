@@ -31,3 +31,14 @@ The manuscript's novelty is limited to an executable adversarial failure of a **
 
 ## Archive integrity
 Every file listed in `MANIFEST_SHA256.txt` is hash-pinned. Do not include the separate private blinded-treatment key in a public source release.
+## Public GitHub branch execution
+
+Clone branch `aneural-causal-specificity-v18-reproducibility`, then run:
+
+```bash
+cd research/aneural-v18
+python -m pip install numpy scipy pandas matplotlib scikit-learn statsmodels
+python run_public_replication_v18.py
+```
+
+This command generates both synthetic cohorts into `src/frozen_audit/`, checks the frozen source hash, reruns the same three-gate analysis, recomputes effective dimensionality without importing that analysis, and runs the causal-intervention benchmark. The saved summaries under `results/` are source-audit receipts. Raw generated trajectories are reproduced by code rather than checked into the Git branch. The complete offline ZIP, including saved trajectories and immutable manifest, is provided as a separate manuscript reproducibility package. The Git branch is public but is **not itself peer review**.
