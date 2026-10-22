@@ -34,3 +34,14 @@ python Supplementary_Code_7.py --outdir causal
 ## Publication status
 
 A public GitHub branch exists, but this does **not** substitute for a DOI-pinned immutable release, complete external code review, independent prospective biological validation, or author-approved manuscript declarations.
+
+## Additional independent feature audit (21 October 2026)
+
+`independent_metric_audit.py` adds a fresh source-level check that does not import the frozen pipeline. After generating `audit/` with Supplementary Code 6, run:
+
+```bash
+python independent_metric_audit.py --audit-root audit --output independent_metric_outputs
+```
+
+The independent implementation recovers AUC **0.8421223958** (common drive) versus **0.4931640625** (no-change), and recomputes every trajectory's effective dimensionality using singular values (maximum discrepancy < 1.6e-14). The original compressed-complexity feature is **constant at 1.0275 across all 384 common-driver observations** and does not supply discriminative information. In an illustrative four-day exact two-sided sign-flip diagnostic, the primary dimension effect has **P=0.125**, not the frozen cell-level P=2.29e-17. These are source-locked *computational* diagnostics, not independent biological validation or a corrected registered hypothesis test. See `INDEPENDENT_METRIC_AUDIT_RESULTS.json`.
+
