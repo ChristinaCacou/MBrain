@@ -1,0 +1,46 @@
+name: One-off OUD edgeR validation
+on:
+  push:
+    branches:
+      - analysis/oud-edger-validation-20261024
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  run-edger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install R and official Bioconductor edgeR
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y r-base-core r-bioc-edger
+          Rscript -e 'library(edgeR); print(packageVersion("edgeR"))'
+      - name: Retrieve original public raw counts
+        run: |
+          curl -fSL --retry 3 --max-time 180 --output raw_counts.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE174nnn/GSE174409/suppl/GSE174409_raw_counts_02102020.csv.gz'
+          gzip -t raw_counts.csv.gz
+          echo 'ae29defb14b6ac29de871f56452014c82f87f58ad31d52151cbbd99cef39870a  raw_counts.csv.gz' | sha256sum -c -
+      - name: Recover published donor covariates
+        env:
+          META_ZLIB_BASE64: eNp9lEtv2zAQhO/9LQTB9+MoJSh6KJwe2rNhpEpqoHYMGwX68ztLSY7IZarrfpxdDldzO5wuvydxe/tzfZ7258Np2j//0uLn8fB6frsdb+I2/RWH10lcTkdxvbzsr8fzpy87LXbDg3j68SheptMBAtYLrWT2IkqNurnX52oWRsmEokXRtoddEsbKuB529WGnhNFSJYsPRADha8JboZ1cj4dW3juhjfS2CCSZwMSmRSiER9WjmpiCF8bIiAYR5dx0p8ZhHY/UtWICWWgvVaAPkCKo66GWcVbK5S66MdIZoZN0ablKQbidsCOv0GyYbj3VQgdpVsQQ4plOmcfoZejSLDQ6jlplVMk3HZlEppe1872XeVMj4Wk3rF8nzcw7Q6tl1+dztF6qeQJaLb+6komY3X142n2/24s3sFgDEHRfY96JuR6FjjLH5TLGMgVaJOwpBGgNjGsFMi0qxl3qvqnjOG6KBrksgAm8gacGeOR5RUxsFGhPdRmArDKpK5Bl2cjiQuYjwMFlza3i5xN57cij8qdyFw3V/LrptjWRFtTJsJ7nHrryr+rlhrbnoZNmeWfr+YRIA7rC0j+0/RUtXHGQDLCRC1jyWC8LbRO3mB4xrQ0yF8jCy5SWGzjVCASF9w3zG4+DFo9fv33+T1SOg9kgPC3HwXKJOjDHwbUSPDPHwbdQFZvjEHgfnpzjEFmvKjzHIXV0tvk5DplN0kYojFMdGZai4D5wuA5ScMxmnqWgemazOAXHHWeJCsp31FioggtMbZurAGJHiEUruMSEqnQFkTu2soDFUir2Rm3GAlq9/zhmAZkt1ElaILajU4UtGMdlqrwF4hlSRy6Q0OtUpS6gyHSq4AWRPpB5z15AuTfOPX7xY6ueSpXAgHoeVyEMhltc5TCInsNVFIPpO3xPYxC+N/A2kMEEPkuVyUBiT2Yby2BS7w02yQwk92S24YxgVExmk8//AFkSuBM=
+        run: |
+          printf '%s' "$META_ZLIB_BASE64" | base64 -d | python3 -c 'import sys,zlib;sys.stdout.buffer.write(zlib.decompress(sys.stdin.buffer.read()))' > matched_metadata.csv
+          test "$(wc -l < matched_metadata.csv)" -eq 81
+      - name: Execute official edgeR quasi-likelihood pipeline
+        run: |
+          Rscript validation/run_discovery_edgeR.R raw_counts.csv.gz matched_metadata.csv results | tee edgeR_console_log.txt
+          test -f results/edgeR_VERIFIED_SUMMARY.csv
+          cat results/edgeR_VERIFIED_SUMMARY.csv
+          sha256sum raw_counts.csv.gz matched_metadata.csv validation/run_discovery_edgeR.R > results/INPUT_SHA256SUMS.txt
+          cp edgeR_console_log.txt results/
+      - name: Preserve scientific outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-edgeR-official-output
+          path: |
+            results/
+            edgeR_console_log.txt
+          retention-days: 7
