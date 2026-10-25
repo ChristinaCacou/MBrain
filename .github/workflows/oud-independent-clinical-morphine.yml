@@ -1,0 +1,169 @@
+name: New living-human and controlled-morphine validation
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-independent-clinical-morphine.yml]
+permissions:
+  contents: read
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official edgeR and Python scientific dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y r-base-core r-bioc-edger
+          python3 -m pip install --break-system-packages -q pandas numpy scipy statsmodels requests
+      - name: Retrieve two new primary public datasets with published GEO identifiers
+        run: |
+          mkdir -p new_validation
+          curl -fLsS --retry 3 --max-time 150 -o clinical_VST.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE198nnn/GSE198121/suppl/GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz'
+          curl -fLsS --retry 3 --max-time 150 -o mouse_counts.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE289nnn/GSE289002/suppl/GSE289002_mouse_raw_counts.csv.gz'
+          curl -fLsS --retry 3 --max-time 150 -o mouse_family.soft.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE289nnn/GSE289002/soft/GSE289002_family.soft.gz'
+          gzip -t clinical_VST.csv.gz
+          gzip -t mouse_counts.csv.gz
+          gzip -t mouse_family.soft.gz
+          sha256sum clinical_VST.csv.gz mouse_counts.csv.gz mouse_family.soft.gz > new_validation/INPUTS_SHA256SUM.txt
+      - name: Predefined nine-gene test in living OUD blood, all donors
+        run: |
+          set -o pipefail
+          cat > clinical_validation.py <<'PY'
+          import pandas as pd,numpy as np,itertools,json
+          from scipy.stats import ttest_ind
+          from statsmodels.stats.multitest import multipletests
+          x=pd.read_csv('clinical_VST.csv.gz',index_col=0)
+          oud=['H'+str(k) for k in range(1,8)]
+          ctrl=['N'+str(k) for k in range(1,8)]
+          assert x.columns.tolist()==oud+ctrl, x.columns.tolist()
+          genes=['DUSP2','ARL4D','EGR1','SYNM','CP','ANKRD22','SERPINA3','SFN','NPAS4']
+          assert len(genes)==9
+          rows=[]; comb=list(itertools.combinations(range(14),7))
+          for g in genes:
+              sub=x.loc[x.index==g]
+              row={'gene':g,'present':len(sub)==1,'n_oud':7,'n_controls':7}
+              if len(sub)==1:
+                  arr=sub[oud+ctrl].iloc[0].to_numpy(dtype=float)
+                  assert np.all(np.isfinite(arr))
+                  effect=float(np.mean(arr[:7])-np.mean(arr[7:]))
+                  pwelch=float(ttest_ind(arr[:7],arr[7:],equal_var=False).pvalue)
+                  diffs=[]
+                  s=sum(arr)
+                  for ids in comb:
+                      sa=float(arr[list(ids)].sum())
+                      diffs.append(abs((2*sa-s)/7.))
+                  pperm=float(np.mean(np.array(diffs)>=abs(effect)-1e-11))
+                  row.update(VST_mean_diff_OUD_minus_control=effect,p_Welch=pwelch,p_exact_permutation=pperm,mean_oud=float(np.mean(arr[:7])),mean_control=float(np.mean(arr[7:])))
+              rows.append(row)
+          t=pd.DataFrame(rows)
+          # All nine nominated genes form the testing family. Genes absent from matrix get p=1, not discarded.
+          p=t['p_exact_permutation'].fillna(1).to_numpy()
+          t['q_BH_9_exact']=multipletests(p,method='fdr_bh')[1]
+          t['p_Holm_9_exact']=multipletests(p,method='holm')[1]
+          t.to_csv('new_validation/GSE198121_living_14_preselected_nine_genes.csv',index=False)
+          print('LIVING HUMAN RESULTS (7 OUD versus 7 controls; VST scale; NO covariate adjustment):')
+          print(t[['gene','present','VST_mean_diff_OUD_minus_control','p_exact_permutation','q_BH_9_exact','p_Holm_9_exact']].to_string(index=False))
+          print('VST matrix genes',len(x),'unique gene symbols',x.index.nunique(),'duplicates',len(x)-x.index.nunique())
+          open('new_validation/clinical_design.json','w').write(json.dumps({'GEO':'GSE198121','tissue':'peripheral blood','design':'7 living male OUD versus 7 living male controls','inputs':'provided VST-normalized gene table; not count data','multiplicity':'9 named genes, including all absent genes as p=1','permutation':'all 3432 labelings (14 choose 7)','interpretation':'not direct brain replication and cannot test sex-specific effects'},indent=2))
+          assert len(t)==9
+          PY
+          python3 clinical_validation.py | tee new_validation/clinical_console.txt
+          cp clinical_validation.py new_validation/
+      - name: Match experimental mouse tissues, opioid conditions and sex from official GEO metadata
+        run: |
+          set -o pipefail
+          cat > mouse_metadata.py <<'PY'
+          import gzip,pandas as pd
+          rows=[];r=None
+          with gzip.open('mouse_family.soft.gz','rt',encoding='utf8',errors='replace') as f:
+              for line in f:
+                  line=line.rstrip('\n')
+                  if line.startswith('^SAMPLE = '):
+                      if r is not None:rows.append(r)
+                      r={'gsm':line.partition('=')[2].strip()}
+                  elif r is not None and line.startswith('!Sample_title = '):
+                      r['sample']=line.partition('=')[2].strip()
+                  elif r is not None and line.startswith('!Sample_organism_ch1 = '):
+                      r['organism']=line.partition('=')[2].strip()
+                  elif r is not None and line.startswith('!Sample_characteristics_ch1 = '):
+                      a=line.partition('=')[2].strip()
+                      if ':' in a:
+                          k,v=a.split(':',1);r[k.strip().lower().replace(' ','_')]=v.strip()
+              if r is not None:rows.append(r)
+          m=pd.DataFrame(rows)
+          m=m[m.organism=='Mus musculus'].copy()
+          raw=pd.read_csv('mouse_counts.csv.gz',nrows=1,index_col=0)
+          assert set(raw.columns)==set(m['sample']),('mouse column/sample mismatch',len(raw.columns),len(m))
+          assert len(m)==len(raw.columns),len(m)
+          assert not m['sample'].duplicated().any()
+          assert set(m['region'])=={'PFC','NAc'}
+          assert set(m['sex'])=={'male','female'}
+          print('Experimental treatment groups:')
+          print(m.groupby(['region','sex','treatment']).size().to_string())
+          m.to_csv('new_validation/GSE289002_mouse_sample_metadata.csv',index=False)
+          PY
+          python3 mouse_metadata.py | tee new_validation/experimental_design_console.txt
+          cp mouse_metadata.py new_validation/
+      - name: Official edgeR quasi-likelihood experimental morphine-response test
+        run: |
+          set -o pipefail
+          cat > mouse_egr1.R <<'R'
+          suppressPackageStartupMessages(library(edgeR))
+          counts<-as.matrix(read.csv(gzfile('mouse_counts.csv.gz'),row.names=1,check.names=FALSE))
+          m<-read.csv('new_validation/GSE289002_mouse_sample_metadata.csv')
+          stopifnot(setequal(colnames(counts),m$sample),all(counts>=0),all(counts==round(counts)))
+          m<-m[match(colnames(counts),m$sample),,drop=FALSE]
+          target<-'ENSMUSG00000038418' # MGI / NCBI Gene ID 13653 Egr1
+          stopifnot(target%in%rownames(counts))
+          treatment_levels<-c('Sal','Chronic mor','Mor + 24h','Mor + 2W')
+          stopifnot(setequal(unique(m$treatment),treatment_levels))
+          results<-list()
+          for(region in c('PFC','NAc')){
+            z<-m[m$region==region,,drop=FALSE]
+            z$sex<-factor(z$sex,levels=c('female','male'))
+            z$treatment<-factor(z$treatment,levels=treatment_levels)
+            print(table(z$sex,z$treatment))
+            raw<-counts[,z$sample,drop=FALSE]
+            for(mode in c('additive','interaction')){
+              d<-model.matrix(if(mode=='additive') ~sex+treatment else ~sex*treatment,data=z)
+              stopifnot(qr(d)$rank==ncol(d),all(rowSums(d)>0),nrow(d)>=25)
+              y<-DGEList(counts=raw);k<-filterByExpr(y,design=d)
+              y<-calcNormFactors(y[k,,keep.lib.sizes=FALSE],method='TMM')
+              stopifnot(target%in%rownames(y$counts))
+              y<-estimateDisp(y,d,robust=TRUE)
+              fit<-glmQLFit(y,d,robust=TRUE)
+              for(condition in treatment_levels[-1]){
+                coef<-if(mode=='additive') paste0('treatment',condition) else paste0('sexmale:treatment',condition)
+                stopifnot(coef%in%colnames(d))
+                test<-glmQLFTest(fit,coef=match(coef,colnames(d)))
+                tab<-topTags(test,n=Inf,sort.by='none')$table
+                e<-tab[target,,drop=FALSE]
+                results[[length(results)+1]]<-data.frame(region=region,mode=mode,contrast=condition,baseline='Sal',coefficient=coef,nsamples=nrow(z),n_filtered_genes=nrow(tab),Egr1_logFC=e$logFC,Egr1_p=e$PValue,Egr1_whole_transcriptome_FDR=e$FDR,whole_transcriptome_FDR05=sum(tab$FDR<0.05))
+              }
+            }
+          }
+          o<-do.call(rbind,results)
+          o$Egr1_BH6_mode<-NA_real_
+          for(mode in unique(o$mode)){ix=o$mode==mode;o$Egr1_BH6_mode[ix]<-p.adjust(o$Egr1_p[ix],method='BH')}
+          write.csv(o,'new_validation/GSE289002_mouse_Egr1_6_exposure_and_6_sex_interactions.csv',row.names=FALSE)
+          writeLines(capture.output(sessionInfo()),'new_validation/mouse_R_sessionInfo.txt')
+          print(o[,c('region','mode','contrast','Egr1_logFC','Egr1_p','Egr1_BH6_mode','Egr1_whole_transcriptome_FDR')],row.names=FALSE)
+          R
+          Rscript mouse_egr1.R | tee new_validation/mouse_egr1_console.txt
+          cp mouse_egr1.R new_validation/
+      - name: Document gene identities and source input files
+        run: |
+          sha256sum new_validation/*.csv new_validation/*.py new_validation/*.R > new_validation/OUTPUTS_SHA256SUM.txt
+          cat > new_validation/ANALYSIS_SCOPE.txt <<'TXT'
+          ADDITIONAL HUMAN CLINICAL ANALYSIS: GSE198121 living adults with OUD (7 male vs 7 male controls), peripheral blood VST-normalized matrix. Nine named post hoc candidate genes; exact 3432 two-group label permutations; BH and Holm nine tests; not a brain comparison.
+          CONTROLLED EXPERIMENTAL EXPOSURE ANALYSIS: GSE289002, real C57BL/6J mice and original raw-count matrices; separately within PFC and NAc, sex-adjusted effects for chronic morphine, 24h withdrawal, and 2-week withdrawal against saline; tested Egr1 against BH across six predeclared contrasts, and again six sex-by-exposure interactions. Uses official edgeR NB quasi-likelihood fits. This is REANALYSIS of an already published intervention experiment, not a new intervention or Egr1 knockdown/rescue.
+          Gene: mouse ENSMUSG00000038418 Egr1 (NCBI 13653). Design chosen before examining the new matrices' outcome estimates. Do not treat these post hoc analyses as preregistered or as novel causal Egr1 rescue.
+          TXT
+      - name: Archive complete new clinical and animal analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-new-living-human-and-controlled-morphine-results
+          path: new_validation/
+          retention-days: 7
