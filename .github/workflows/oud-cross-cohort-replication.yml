@@ -1,0 +1,51 @@
+name: Cross-cohort discovery-set replication
+on:
+  push:
+    branches:
+      - analysis/oud-edger-validation-20261024
+    paths:
+      - .github/workflows/oud-cross-cohort-replication.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  two-cohort-replication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: \${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install numerical packages
+        run: |
+          python3 -m pip install --break-system-packages --quiet pandas scipy statsmodels numpy
+          gh --version
+      - name: Obtain both completed official edgeR results
+        run: |
+          mkdir -p primary external
+          gh run download 40149087088 -R ChristinaCacou/MBrain --name oud-edgeR-official-output --dir primary
+          gh run download 40149337749 -R ChristinaCacou/MBrain --name oud-independent-ba9-results --dir external
+          test -s primary/results/DLPFC_additive_OUD_edgeR_QL.csv
+          test -s external/independent_outputs/GSE182321_edgeR_full.csv
+      - name: Obtain reproducible Ensembl-to-symbol annotation
+        run: |
+          curl -fLsS --retry 3 --max-time 180 -o gencode.gtf.gz \
+            https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_48/gencode.v48.annotation.gtf.gz
+          gzip -t gencode.gtf.gz
+          sha256sum gencode.gtf.gz > gencode_sha256.txt
+      - name: Run one whole-family, direction-concordant BH replication screen
+        run: |
+          python3 validation/replicate_across_cohorts.py | tee replication_console.log
+          sha256sum primary/results/DLPFC_additive_OUD_edgeR_QL.csv external/independent_outputs/GSE182321_edgeR_full.csv validation/replicate_across_cohorts.py > replication/INPUT_SHA256SUMS.txt
+          cp gencode_sha256.txt replication/
+          cp replication_console.log replication/
+      - name: Archive full findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-primary-discovery-external-followup-all-genes
+          path: |
+            replication/
+            replication_console.log
+          retention-days: 7
