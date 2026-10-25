@@ -35,6 +35,12 @@ jobs:
           cat results/edgeR_VERIFIED_SUMMARY.csv
           sha256sum raw_counts.csv.gz matched_metadata.csv validation/run_discovery_edgeR.R > results/INPUT_SHA256SUMS.txt
           cp edgeR_console_log.txt results/
+      - name: Rerun exact-model donor 22 deletion sensitivity
+        run: |
+          Rscript validation/donor22_edgeR_QL.R raw_counts.csv.gz matched_metadata.csv results/donor22 | tee results/donor22_console_log.txt
+          test -s results/donor22/donor22_deleted_selected_gene_summary.csv
+          cat results/donor22/donor22_deleted_selected_gene_summary.csv
+          sha256sum raw_counts.csv.gz matched_metadata.csv validation/donor22_edgeR_QL.R > results/donor22/INPUT_SHA256SUMS.txt
       - name: Preserve scientific outputs
         if: always()
         uses: actions/upload-artifact@v4
