@@ -36,6 +36,7 @@ jobs:
           sha256sum gencode.gtf.gz > gencode_sha256.txt
       - name: Run one whole-family, direction-concordant BH replication screen
         run: |
+          set -o pipefail
           python3 validation/replicate_across_cohorts.py | tee replication_console.log
           sha256sum primary/results/DLPFC_additive_OUD_edgeR_QL.csv external/independent_outputs/GSE182321_edgeR_full.csv validation/replicate_across_cohorts.py > replication/INPUT_SHA256SUMS.txt
           cp gencode_sha256.txt replication/
