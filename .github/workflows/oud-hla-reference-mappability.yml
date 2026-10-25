@@ -1,0 +1,59 @@
+name: HLA reference sequence overlap diagnostic (not allele-aware read remapping)
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-hla-reference-mappability.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Ensembl reference gene transcripts and audit exact k-mers
+        run: |
+          cat > reference_check.py <<'PY'
+          import json,time,urllib.request
+          from pathlib import Path
+          out=Path('hla_reference');out.mkdir(exist_ok=True)
+          def get(url):
+              for n in range(5):
+                  try:
+                      req=urllib.request.Request(url,headers={'Accept':'application/json','User-Agent':'ScientificReproducibility/1.0'})
+                      with urllib.request.urlopen(req,timeout=40) as response:return json.load(response)
+                  except Exception:
+                      if n==4:raise
+                      time.sleep((n+1)*4)
+          def fetch(gene_id):
+              d=get('https://rest.ensembl.org/lookup/id/'+gene_id+'?expand=1')
+              coding=[x for x in d.get('Transcript',[]) if x.get('biotype')=='protein_coding']
+              if not coding:raise ValueError('Missing protein coding transcript')
+              canon=str(d.get('canonical_transcript','')).split('.')[0]
+              coding.sort(key=lambda x: (x.get('id')==canon,x.get('is_canonical')==1,x.get('length',0)),reverse=True)
+              tid=coding[0]['id']
+              dna=get('https://rest.ensembl.org/sequence/id/'+tid+'?type=cdna')['seq'].upper()
+              assert dna and set(dna).issubset(set('ACGTN'))
+              return {'gene':d.get('display_name'),'gene_id':gene_id,'transcript':tid,'canonical':canon,'assembly':d.get('assembly_name'),'dna':dna}
+          a=fetch('ENSG00000196126');b=fetch('ENSG00000198502')
+          def kmers(seq,k):return {seq[i:i+k] for i in range(len(seq)-k+1) if 'N' not in seq[i:i+k]}
+          results=[]
+          for k in [35,50,75,100,125,150]:
+              sa=kmers(a['dna'],k);sb=kmers(b['dna'],k);both=sa&sb
+              results.append({'k':k,'distinct_DRB1_kmers':len(sa),'distinct_DRB5_kmers':len(sb),'shared_identical_kmers':len(both),'DRB1_fraction_shared':len(both)/len(sa) if sa else None,'DRB5_fraction_shared':len(both)/len(sb) if sb else None})
+          meta=[{k:v for k,v in x.items() if k!='dna'} for x in [a,b]]
+          (out/'HLA_reference_kmer_results.json').write_text(json.dumps({'reference_transcripts':meta,'results':results,'limit':'Not personalized HLA, no original FASTQ, no sequence mapping; reference-only test.'},indent=2)+'\n')
+          for x in [a,b]:(out/(x['gene']+'_cdna.fasta')).write_text('>'+x['transcript']+'\n'+x['dna']+'\n')
+          print(json.dumps(results,indent=2))
+          PY
+          python3 reference_check.py | tee reference.log
+          mkdir -p hla_reference
+          cp reference.log reference_check.py hla_reference/
+      - name: Preserve mapping diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HLA-DRB1-DRB5-reference-kmer-mapping-necessary-not-sufficient
+          path: hla_reference/
+          retention-days: 7
