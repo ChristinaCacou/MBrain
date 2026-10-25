@@ -15,6 +15,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y r-base-core r-bioc-edger
+          python3 -m pip install --break-system-packages -q pandas
       - name: Download checksum verified primary GEO counts and matched public metadata
         run: |
           curl -fLsS --retry 3 --max-time 180 -o original_counts.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE174nnn/GSE174409/suppl/GSE174409_raw_counts_02102020.csv.gz'
