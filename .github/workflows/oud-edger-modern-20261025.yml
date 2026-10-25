@@ -1,0 +1,51 @@
+name: OUD exact-version edgeR reanalysis (modern Bioconductor)
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-edger-modern-20261025.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  edger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - name: Install Bioconductor edgeR for current release
+        run: |
+          Rscript -e 'install.packages("BiocManager",repos="https://cloud.r-project.org"); BiocManager::install("edgeR",ask=FALSE,update=FALSE); library(edgeR); print(R.version.string); print(packageVersion("edgeR")); print(packageVersion("limma"))'
+      - name: Download checksum-verified public counts and recover published metadata
+        run: |
+          curl -fLsS --retry 3 --max-time 180 -o raw_counts.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE174nnn/GSE174409/suppl/GSE174409_raw_counts_02102020.csv.gz'
+          echo 'ae29defb14b6ac29de871f56452014c82f87f58ad31d52151cbbd99cef39870a  raw_counts.csv.gz' | sha256sum -c -
+          python3 - <<'PY'
+          import pathlib,re,base64,zlib
+          yml=pathlib.Path('.github/workflows/oud-edger-2026.yml').read_text()
+          assert (m:=re.search(r'META_ZLIB_BASE64:\s*([A-Za-z0-9+/=]+)',yml))
+          pathlib.Path('matched_metadata.csv').write_bytes(zlib.decompress(base64.b64decode(m.group(1))))
+          assert len(pathlib.Path('matched_metadata.csv').read_text().splitlines())==81
+          PY
+      - name: Execute exact same model on all 40 and excluding donor 22
+        run: |
+          set -o pipefail
+          Rscript validation/run_discovery_edgeR.R raw_counts.csv.gz matched_metadata.csv modern_results | tee full_console.log
+          Rscript validation/donor22_edgeR_QL.R raw_counts.csv.gz matched_metadata.csv modern_results/donor22 | tee deletion_console.log
+          cat modern_results/edgeR_VERIFIED_SUMMARY.csv
+          cat modern_results/donor22/donor22_deleted_selected_gene_summary.csv
+          sha256sum raw_counts.csv.gz matched_metadata.csv validation/run_discovery_edgeR.R validation/donor22_edgeR_QL.R > modern_results/SOURCE_SHA256SUMS.txt
+          cp full_console.log deletion_console.log modern_results/
+      - name: Preserve full result tables and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-edgeR-modern-donor22-full-results
+          path: |
+            modern_results/
+            full_console.log
+            deletion_console.log
+          retention-days: 7
