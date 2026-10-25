@@ -26,7 +26,7 @@ jobs:
       - name: Execute complete blood exploratory analysis and save provenance
         run: |
           python3 validation/GSE198121_independent_blood_EGR1.py GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz blood_outputs | tee analysis_console.log
-          cp BLOOD_INPUT_SHA256SUMS.txt analysis_console.log blood_outputs/
+          cp BLOOD_INPUT_SHA256SUMS.txt analysis_console.log GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz blood_outputs/
           sha256sum validation/GSE198121_independent_blood_EGR1.py >> blood_outputs/BLOOD_INPUT_SHA256SUMS.txt
       - name: Preserve outputs
         if: always()
