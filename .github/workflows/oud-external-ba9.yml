@@ -1,0 +1,118 @@
+name: Independent human BA9 OUD expression check
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-external-ba9.yml]
+permissions:
+  contents: read
+jobs:
+  independent-ba9:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install R and edgeR
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y r-base-core r-bioc-edger
+          python3 -m pip install --break-system-packages --quiet pandas
+      - name: Download independent GSE182321 primary files
+        run: |
+          curl -fSL --retry 3 --max-time 180 -o external_counts.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE182nnn/GSE182321/suppl/GSE182321_Raw_counts_matrix_UTHBC.csv.gz'
+          curl -fSL --retry 3 --max-time 180 -o external_series.txt.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE182nnn/GSE182321/matrix/GSE182321_series_matrix.txt.gz'
+          gzip -t external_counts.csv.gz
+          gzip -t external_series.txt.gz
+          sha256sum external_counts.csv.gz external_series.txt.gz
+      - name: Match independent samples, verify phenotype labels and integer counts
+        run: |
+          cat > prep_external.py <<'PY'
+          import csv,gzip,re
+          import pandas as pd
+          from pathlib import Path
+          fields={}
+          with gzip.open('external_series.txt.gz','rt',encoding='utf-8',errors='replace') as f:
+              for line in f:
+                  if not line.startswith('!Sample_'): continue
+                  a=next(csv.reader([line.rstrip('\n')],delimiter='\t'))
+                  fields.setdefault(a[0],[]).append([x.strip('"') for x in a[1:]])
+          ids=fields.get('!Sample_geo_accession',[[]])[0]
+          titles=fields.get('!Sample_title',[[]])[0]
+          chars=fields.get('!Sample_characteristics_ch1',[])
+          assert len(ids)==41 and len(titles)==41,(len(ids),len(titles))
+          rows=[]
+          for j,(gsm,title) in enumerate(zip(ids,titles)):
+              facts='\n'.join(a[j] for a in chars if len(a)>j)
+              def extract(p):
+                  m=re.search(p,facts,re.I)
+                  return m.group(1).strip() if m else None
+              label=extract(r'mendez et al 2021 molecular psychiatry subject label\s*:\s*([^\n]+)')
+              sex=extract(r'\bsex\s*:\s*(male|female)\b')
+              age=extract(r'age \(years\)\s*:\s*([0-9.]+)')
+              pmi=extract(r'postmortem interval \(hours\)\s*:\s*([0-9.]+)')
+              rin=extract(r'rna integrity number\s*:\s*([0-9.]+)')
+              diagnosis=('CONT' if label and re.search(r'\bctrl\b|\bcontrol\b',label,re.I) else
+                         'OUD' if label and re.search(r'\boud\b|opioid',label,re.I) else None)
+              rows.append(dict(sample=title,gsm=gsm,diagnosis=diagnosis,sex=sex.lower() if sex else None,age=age,pmi=pmi,rin=rin,source_label=label))
+          md=pd.DataFrame(rows)
+          md.to_csv('external_metadata_audit.csv',index=False)
+          assert not md['sample'].duplicated().any()
+          assert not md[['diagnosis','sex','age','pmi','rin']].isna().any().any(),md[['sample','diagnosis','sex','age','pmi','rin']].to_string(index=False)
+          assert set(md['diagnosis'])=={'CONT','OUD'}
+          d=pd.read_csv('external_counts.csv.gz',compression='gzip',low_memory=False)
+          cols=[c for c in d.columns if re.fullmatch(r'UTHBC\d+',str(c).strip())]
+          assert cols and set(cols)==set(md['sample']),('count vs GEO mismatch',cols[:10],md['sample'].head().tolist(), d.columns[:10].tolist())
+          gene=next((c for c in ['geneName','gene_name','GeneName','geneSymbol','gene'] if c in d.columns),None)
+          assert gene is not None, d.columns[:20].tolist()
+          x=d[[gene]+cols].dropna(subset=[gene]).copy()
+          for c in cols: x[c]=pd.to_numeric(x[c],errors='raise')
+          assert ((x[cols]>=0)&(x[cols]%1==0)).all().all()
+          x=x.groupby(gene,sort=False)[cols].sum()
+          assert 'EGR1' in x.index
+          x.to_csv('external_matched_counts.csv.gz',compression='gzip',index_label='gene')
+          md.to_csv('external_matched_metadata.csv',index=False)
+          print('Verified',len(md),'independent samples',len(x),'genes')
+          print(md.groupby(['sex','diagnosis']).size().to_string())
+          PY
+          python3 prep_external.py
+      - name: Run formal external edgeR OUD main-effect model
+        run: |
+          cat > external_edger.R <<'R'
+          suppressPackageStartupMessages(library(edgeR))
+          ct <- as.matrix(read.csv(gzfile('external_matched_counts.csv.gz'),row.names=1,check.names=FALSE))
+          m <- read.csv('external_matched_metadata.csv')
+          stopifnot(setequal(colnames(ct),m$sample),all(ct>=0),all(ct==round(ct)))
+          m<-m[match(colnames(ct),m$sample),]
+          m$diagnosis<-factor(m$diagnosis,levels=c('CONT','OUD'))
+          m$sex<-factor(m$sex,levels=c('male','female'))
+          for(k in c('age','pmi','rin')) {m[[k]]<-as.numeric(m[[k]]);stopifnot(all(is.finite(m[[k]])));m[[k]]<-as.numeric(scale(m[[k]]))}
+          design<-model.matrix(~sex+diagnosis+age+pmi+rin,data=m)
+          stopifnot(qr(design)$rank==ncol(design))
+          print(table(m$sex,m$diagnosis))
+          y<-DGEList(counts=ct)
+          keep<-filterByExpr(y,design=design)
+          y<-calcNormFactors(y[keep,,keep.lib.sizes=FALSE],method='TMM')
+          y<-estimateDisp(y,design,robust=TRUE)
+          fit<-glmQLFit(y,design,robust=TRUE)
+          test<-glmQLFTest(fit,coef=match('diagnosisOUD',colnames(design)))
+          z<-topTags(test,n=Inf,sort.by='none')$table
+          z$gene<-rownames(z)
+          dir.create('independent_outputs',showWarnings=FALSE)
+          write.csv(z,'independent_outputs/GSE182321_edgeR_full.csv',row.names=FALSE)
+          e<-z[z$gene=='EGR1',c('gene','logFC','PValue','FDR'),drop=FALSE]
+          stopifnot(nrow(e)==1L)
+          write.csv(e,'independent_outputs/GSE182321_EGR1.csv',row.names=FALSE)
+          writeLines(capture.output(sessionInfo()),'independent_outputs/sessionInfo.txt')
+          print(e)
+          R
+          Rscript external_edger.R
+          cp external_metadata_audit.csv independent_outputs/
+          sha256sum external_counts.csv.gz external_series.txt.gz > independent_outputs/input_sha256.txt
+      - name: Archive independent findings and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-independent-ba9-results
+          path: |
+            independent_outputs/
+            external_metadata_audit.csv
+          retention-days: 7
