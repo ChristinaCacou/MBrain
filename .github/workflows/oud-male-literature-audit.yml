@@ -1,0 +1,123 @@
+name: Male-only external sensitivity and 2026 literature overlap
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-male-literature-audit.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Bioconductor edgeR and Python data reader
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y r-base-core r-bioc-edger
+          python3 -m pip install --break-system-packages -q pandas
+      - name: Get verified public donor metadata and counts
+        run: |
+          mkdir -p ref
+          gh run download 40149337749 -R ChristinaCacou/MBrain --name oud-independent-ba9-results --dir ref
+          gh run download 40154022525 -R ChristinaCacou/MBrain --name oud-primary-discovery-external-followup-all-genes --dir ref
+          test -s ref/independent_outputs/external_metadata_audit.csv
+          test -s ref/replication/eligible_independent_replication_tests.csv
+          curl -fLsS --retry 3 --max-time 180 -o external_counts.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE182nnn/GSE182321/suppl/GSE182321_Raw_counts_matrix_UTHBC.csv.gz'
+          echo 'verify original counts'
+          sha256sum external_counts.csv.gz
+          python3 - <<'PY'
+          import pandas as pd,re
+          m=pd.read_csv('ref/independent_outputs/external_metadata_audit.csv')
+          a=pd.read_csv('external_counts.csv.gz',compression='gzip',low_memory=False)
+          cols=[c for c in a.columns if re.fullmatch('UTHBC[0-9]+',str(c))]
+          assert len(cols)==41 and set(cols)==set(m['sample'])
+          gene=next((z for z in ['geneName','gene_name','GeneName','geneSymbol','gene'] if z in a.columns),None)
+          assert gene is not None
+          a=a[[gene]+cols]
+          for c in cols: a[c]=pd.to_numeric(a[c],errors='raise')
+          assert ((a[cols]>=0)&(a[cols]%1==0)).all().all()
+          a=a.groupby(gene,sort=False)[cols].sum()
+          a.to_csv('counts_for_R.csv.gz',compression='gzip',index_label='gene')
+          m.to_csv('metadata_for_R.csv',index=False)
+          PY
+      - name: Conduct male-only edgeR sensitivity for entire expressed transcriptome
+        run: |
+          set -o pipefail
+          cat > run_male.R <<'R'
+          suppressPackageStartupMessages(library(edgeR))
+          ct<-as.matrix(read.csv(gzfile('counts_for_R.csv.gz'),row.names=1,check.names=FALSE))
+          m<-read.csv('metadata_for_R.csv',stringsAsFactors=FALSE)
+          stopifnot(setequal(colnames(ct),m$sample))
+          m<-m[match(colnames(ct),m$sample),,drop=FALSE]
+          keep<-m$sex=='male'
+          m<-m[keep,,drop=FALSE]; ct<-ct[,keep,drop=FALSE]
+          stopifnot(nrow(m)==27L,sum(m$diagnosis=='OUD')==15L,sum(m$diagnosis=='CONT')==12L)
+          m$diagnosis<-factor(m$diagnosis,levels=c('CONT','OUD'))
+          for(k in c('age','pmi','rin')) {m[[k]]<-as.numeric(m[[k]]);stopifnot(all(is.finite(m[[k]])));m[[k]]<-as.numeric(scale(m[[k]]))}
+          X<-model.matrix(~diagnosis+age+pmi+rin,data=m)
+          stopifnot(qr(X)$rank==ncol(X))
+          y<-DGEList(counts=ct);k<-filterByExpr(y,design=X);y<-calcNormFactors(y[k,,keep.lib.sizes=FALSE],method='TMM')
+          y<-estimateDisp(y,X,robust=TRUE);fit<-glmQLFit(y,X,robust=TRUE);q<-glmQLFTest(fit,coef='diagnosisOUD')
+          z<-topTags(q,n=Inf,sort.by='none')$table
+          z$gene<-rownames(z)
+          dir.create('male_outputs',showWarnings=FALSE)
+          write.csv(z,'male_outputs/GSE182321_male_only_edgeR_full.csv',row.names=FALSE)
+          target<-c('DUSP2','ARL4D','EGR1','SYNM','CP','ANKRD22','SERPINA3','SFN','NPAS4')
+          z$preselected<-z$gene%in%target
+          ss<-z[z$preselected,c('gene','logFC','PValue','FDR'),drop=FALSE]
+          # Do NOT assert all nine are expressed, missing genes recorded separately
+          ss<-merge(data.frame(gene=target),ss,by='gene',all.x=TRUE)
+          ss$missing_filtered_out<-is.na(ss$PValue)
+          write.csv(ss,'male_outputs/preselected_nine_male_only.csv',row.names=FALSE)
+          writeLines(capture.output(sessionInfo()),'male_outputs/sessionInfo.txt')
+          print(ss)
+          R
+          Rscript run_male.R | tee male_analysis_log.txt
+          cp male_analysis_log.txt male_outputs/
+          cp metadata_for_R.csv male_outputs/
+          sha256sum external_counts.csv.gz run_male.R > male_outputs/sha256.txt
+      - name: Compare full selected family with male-only external direction
+        run: |
+          python3 - <<'PY'
+          import pandas as pd
+          s=pd.read_csv('ref/replication/eligible_independent_replication_tests.csv')
+          m=pd.read_csv('male_outputs/GSE182321_male_only_edgeR_full.csv')
+          m=m.rename(columns={'gene':'symbol','logFC':'fc_external_male','PValue':'p_external_male','FDR':'q_external_male'})
+          z=s.merge(m[['symbol','fc_external_male','p_external_male','q_external_male']],on='symbol',how='left',validate='one_to_one')
+          z['male_direction_concordant']=((z['fc_primary']*z['fc_external_male'])>0)
+          z.to_csv('male_outputs/full_952_followup_male_only_sensitivity.csv',index=False)
+          a=z[z['replicated']==True]
+          print('Nine of previously full-family BH, or twelve of prior 952 BH, male sensitivity:')
+          print(a[['symbol','fc_primary','fc_external','fc_external_male','p_external_male','q_external_male','male_direction_concordant']].to_string(index=False))
+          print('Prior 12 replicated of 952 matching male-only direction:',int(a['male_direction_concordant'].sum()),'/',len(a))
+          assert len(z)==952
+          PY
+      - name: Cross-check published four-cohort meta-analysis significant genes
+        run: |
+          curl -fLsS --retry 2 --max-time 120 -o published_2026_table6.csv 'https://media.springernature.com/original/springer-static/esm/art%3A10.1038%2Fs41398-026-03977-9/MediaObjects/41398_2026_3977_MOESM7_ESM.csv'
+          python3 - <<'PY'
+          import pandas as pd
+          z=pd.read_csv('published_2026_table6.csv',low_memory=False)
+          print('Carter et al 2026 supplementary Table 6 columns:',z.columns.tolist(),'rows:',len(z))
+          targets=['DUSP2','ARL4D','EGR1','SYNM','CP','ANKRD22','SERPINA3','SFN','NPAS4']
+          ans=[]
+          for gene in targets:
+              hits=z.astype(str).apply(lambda col:col.str.fullmatch(gene,case=False,na=False)).any(axis=1)
+              ans.append({'gene':gene,'listed_in_published_2026_FDR_gene_table':bool(hits.any()),'matching_rows':int(hits.sum())})
+          pd.DataFrame(ans).to_csv('male_outputs/published_2026_meta_overlap_audit.csv',index=False)
+          print(pd.DataFrame(ans).to_string(index=False))
+          PY
+          cp published_2026_table6.csv male_outputs/
+          sha256sum published_2026_table6.csv >> male_outputs/sha256.txt
+      - name: Preserve complete sensitivity outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-male-only-and-Carter2026-novelty-audit
+          path: |
+            male_outputs/
+          retention-days: 7
