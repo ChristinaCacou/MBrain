@@ -1,0 +1,58 @@
+name: Inspect new clinical and rodent expression matrix schemas
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-new-data-schema.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve and inspect raw public dataset headers
+        run: |
+          mkdir -p audit
+          python3 - <<'PY' | tee audit/dataset_headers.txt
+          import requests,gzip,io,csv,re
+          base='https://ftp.ncbi.nlm.nih.gov/geo/series/'
+          studies=[
+             ('GSE198121','GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz'),
+             ('GSE289002','GSE289002_mouse_raw_counts.csv.gz'),
+             ('GSE289002','GSE289002_rat_raw_counts_all.csv.gz'),
+             ('GSE224096','GSE224096_counts-cells-GEO_1-26-23.csv.gz')]
+          for ds,f in studies:
+              url=base+ds[:-3]+'nnn/'+ds+'/suppl/'+f
+              print('\nFILE',ds,f,flush=True)
+              try:
+                  z=requests.get(url,timeout=65);print('status',z.status_code,'bytes',len(z.content))
+                  z.raise_for_status()
+                  text=gzip.decompress(z.content).decode('utf8',errors='replace')
+                  print('uncompressed bytes',len(text))
+                  for row in text.splitlines()[:4]:print(row[:1600])
+              except Exception as e:print('ERROR',type(e).__name__,str(e)[:250])
+          PY
+          python3 - <<'PY' | tee audit/rodent_sample_characteristics.txt
+          import requests,gzip,csv
+          u='https://ftp.ncbi.nlm.nih.gov/geo/series/GSE289nnn/GSE289002/soft/GSE289002_family.soft.gz'
+          r=requests.get(u,timeout=65);print('soft status',r.status_code,'length',len(r.content))
+          r.raise_for_status()
+          text=gzip.decompress(r.content).decode('utf8',errors='replace')
+          blocks=[];block=None
+          for line in text.splitlines():
+              if line.startswith('^SAMPLE = '):
+                  block=[line];blocks.append(block)
+              elif block is not None and (line.startswith('!Sample_title') or line.startswith('!Sample_characteristics_ch1') or line.startswith('!Sample_source_name_ch1') or line.startswith('!Sample_organism_ch1')):
+                  block.append(line)
+          print('samples',len(blocks))
+          for b in blocks[:9]: print(' | '.join(b)[:1200])
+          for b in blocks[9:]: print(' | '.join(b)[:450])
+          PY
+      - name: Preserve audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-data-schemas
+          path: audit/
+          retention-days: 7
