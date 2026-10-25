@@ -1,0 +1,37 @@
+name: Independent living-clinical OUD blood EGR1 expression check
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-living-blood-gse198121.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  blood:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install numerical scientific packages
+        run: python3 -m pip install --break-system-packages -q numpy pandas scipy statsmodels
+      - name: Download public GSE198121 published VST matrix
+        run: |
+          curl -fLsS --retry 3 --max-time 180 -o GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE198nnn/GSE198121/suppl/GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz'
+          gzip -t GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz
+          sha256sum GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz > BLOOD_INPUT_SHA256SUMS.txt
+          python3 - <<'PY'
+          import gzip,csv
+          with gzip.open('GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz','rt') as f: print('Matrix headers:',next(csv.reader(f))[:32])
+          PY
+      - name: Execute complete blood exploratory analysis and save provenance
+        run: |
+          python3 validation/GSE198121_independent_blood_EGR1.py GSE198121_VstNormalized_matrix_of_mRNAlncRNAcircRNA_all_Samples.csv.gz blood_outputs | tee analysis_console.log
+          cp BLOOD_INPUT_SHA256SUMS.txt analysis_console.log blood_outputs/
+          sha256sum validation/GSE198121_independent_blood_EGR1.py >> blood_outputs/BLOOD_INPUT_SHA256SUMS.txt
+      - name: Preserve outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-living-blood-GSE198121
+          path: blood_outputs/
+          retention-days: 7
