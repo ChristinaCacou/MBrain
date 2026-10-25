@@ -30,7 +30,7 @@ jobs:
           python3 - <<'PY'
           import pathlib,re,base64,zlib
           t=pathlib.Path('.github/workflows/oud-edger-2026.yml').read_text()
-          b=re.search(r'META_ZLIB_BASE64:\\s*([A-Za-z0-9+/=]+)',t)
+          b=re.search(r'META_ZLIB_BASE64:\s*([A-Za-z0-9+/=]+)',t)
           assert b
           pathlib.Path('matched_metadata.csv').write_bytes(zlib.decompress(base64.b64decode(b.group(1))))
           assert len(pathlib.Path('matched_metadata.csv').read_text().splitlines())==81
