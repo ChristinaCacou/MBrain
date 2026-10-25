@@ -36,7 +36,7 @@ with gzip.open("gencode.gtf.gz","rt") as f:
 gene_map={k:next(iter(v)) for k,v in m.items() if len(v)==1 and len(by_sym[next(iter(v))])==1}
 discover["symbol"]=discover.ensembl.map(gene_map)
 discover["mapping_status"]=np.where(discover.symbol.isna(),"not_unique_or_missing_annotation","mapped")
-c=discover.merge(e[["symbol","p_external","q_external","fc_external"]],on="symbol",how="left",validate="one_to_one")
+c=discover.merge(e[["symbol","p_external","q_external","fc_external"]],on="symbol",how="left",validate="many_to_one")
 c["testable"]=c.p_external.notna()
 test=c[c.testable].copy()
 # BH across the entire available, primary-discovered confirmatory family,
