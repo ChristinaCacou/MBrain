@@ -25,6 +25,32 @@ jobs:
           c=re.search(r'META_ZLIB_BASE64:\s*([A-Za-z0-9+/=]+)',txt).group(1)
           pathlib.Path('matched_metadata.csv').write_bytes(zlib.decompress(base64.b64decode(c)))
           PY
+          curl -fLsS --retry 3 --max-time 180 -o original_series.txt.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE174nnn/GSE174409/matrix/GSE174409_series_matrix.txt.gz'
+          python3 - <<'PY'
+          import gzip,csv
+          import pandas as pd
+          p={}
+          with gzip.open('original_series.txt.gz','rt',encoding='utf-8',errors='replace') as f:
+              for line in f:
+                  if not line.startswith('!Sample_'):continue
+                  row=next(csv.reader([line.rstrip('\n')],delimiter='\t'))
+                  p.setdefault(row[0],[]).append([s.strip('"') for s in row[1:]])
+          names=p['!Sample_title'][0]
+          cols={}
+          for row in p['!Sample_characteristics_ch1']:
+              for idx,cell in enumerate(row):
+                  if ':' not in cell:continue
+                  key,value=cell.split(':',1)
+                  cols.setdefault(key.strip().lower(),{})[names[idx]]=value.strip()
+          m=pd.read_csv('matched_metadata.csv')
+          for key in ['race','avgph','tissuestoragetime_month']:
+              assert key in cols,key
+              m[key]=m['sample'].map(cols[key])
+              assert m[key].notna().all(),(key,m[m[key].isna()]['sample'].to_list())
+          m.to_csv('matched_metadata.csv',index=False)
+          assert len(m)==80
+          print('Verified GEO annotation for pH, race and tissue storage, 80 samples; distinct races:',m['race'].value_counts().to_dict())
+          PY
       - name: Fit matched primary model with clinically motivated additional covariates
         run: |
           set -o pipefail
