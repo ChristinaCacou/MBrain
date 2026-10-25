@@ -1,0 +1,46 @@
+name: Independent clinical and opioid-exposure dataset inventory
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-new-validation-inventory.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect publicly available original experiment assets
+        run: |
+          mkdir -p audit
+          python3 - <<'PY' | tee audit/public_GEO_asset_inventory.txt
+          import requests,re
+          for dataset in ['GSE198121','GSE224096','GSE289002']:
+              url='https://ftp.ncbi.nlm.nih.gov/geo/series/'+dataset[:-3]+'nnn/'+dataset+'/suppl/'
+              print('\n',dataset,url,flush=True)
+              try:
+                  r=requests.get(url,timeout=35);print('HTTP',r.status_code,'page bytes',len(r.content))
+                  print('\n'.join(re.findall(r'href="([^"]+)"',r.text)[:32]))
+              except Exception as e:print('ERROR',type(e).__name__,str(e)[:250])
+          PY
+          python3 - <<'PY' | tee audit/experimental_series_metadata.txt
+          import requests,gzip,csv
+          for accession in ['GSE289002','GSE224096','GSE198121']:
+              url='https://ftp.ncbi.nlm.nih.gov/geo/series/'+accession[:-3]+'nnn/'+accession+'/matrix/'+accession+'_series_matrix.txt.gz'
+              print('\n',accession,flush=True)
+              try:
+                  r=requests.get(url,timeout=45);r.raise_for_status()
+                  t=gzip.decompress(r.content).decode('utf8','replace')
+                  for line in t.splitlines():
+                      if line.startswith('!Series_title') or line.startswith('!Sample_characteristics_ch1') or line.startswith('!Sample_title') or line.startswith('!Sample_geo_accession'):
+                          print(line[:380])
+              except Exception as e:print('ERROR',type(e).__name__,str(e)[:250])
+          PY
+      - name: Archive inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-new-clinical-experimental-asset-inventory
+          path: audit/
+          retention-days: 7
