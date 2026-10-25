@@ -1,0 +1,82 @@
+name: Original cohort extended covariate edgeR audit
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-expanded-covariates.yml]
+permissions:
+  contents: read
+jobs:
+  covariate-sensitivity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official edgeR
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y r-base-core r-bioc-edger
+      - name: Download checksum verified primary GEO counts and matched public metadata
+        run: |
+          curl -fLsS --retry 3 --max-time 180 -o original_counts.csv.gz 'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE174nnn/GSE174409/suppl/GSE174409_raw_counts_02102020.csv.gz'
+          echo 'ae29defb14b6ac29de871f56452014c82f87f58ad31d52151cbbd99cef39870a  original_counts.csv.gz' | sha256sum -c -
+          python3 - <<'PY'
+          import pathlib,re,base64,zlib
+          txt=pathlib.Path('.github/workflows/oud-edger-2026.yml').read_text()
+          c=re.search(r'META_ZLIB_BASE64:\s*([A-Za-z0-9+/=]+)',txt).group(1)
+          pathlib.Path('matched_metadata.csv').write_bytes(zlib.decompress(base64.b64decode(c)))
+          PY
+      - name: Fit matched primary model with clinically motivated additional covariates
+        run: |
+          set -o pipefail
+          cat > extended.R <<'R'
+          suppressPackageStartupMessages(library(edgeR))
+          ct<-as.matrix(read.csv(gzfile('original_counts.csv.gz'),row.names=1,check.names=FALSE))
+          m<-read.csv('matched_metadata.csv',stringsAsFactors=FALSE)
+          dir.create('extended_outputs',showWarnings=FALSE)
+          stopifnot(setequal(colnames(ct),m$sample),nrow(m)==80)
+          m<-m[match(colnames(ct),m$sample),]
+          genes<-c('DUSP2','ARL4D','EGR1','SYNM','CP','ANKRD22','SERPINA3','SFN','NPAS4')
+          ids<-c('ENSG00000158050','ENSG00000175906','ENSG00000120738','ENSG00000182253','ENSG00000047457','ENSG00000152766','ENSG00000196136','ENSG00000175793','ENSG00000174576')
+          all_res<-list()
+          for(region in c('DLPFC','NAC')){
+             x<-m[m$source_name_ch1==region,,drop=FALSE]
+             counts<-ct[,x$sample,drop=FALSE]
+             x$diagnosis<-factor(x$diagnosis,levels=c('CONT','OUD'))
+             x$sex<-factor(x$sex,levels=c('male','female'))
+             x$race<-factor(x$race)
+             for(k in c('age','pmi','rpf_rin','avgph','tissuestoragetime_month')){
+                x[[k]]<-as.numeric(x[[k]])
+                stopifnot(all(is.finite(x[[k]])))
+                x[[k]]<-as.numeric(scale(x[[k]]))
+             }
+             fm<-~sex+diagnosis+age+pmi+rpf_rin+avgph+race+tissuestoragetime_month
+             X<-model.matrix(fm,data=x)
+             stopifnot(qr(X)$rank==ncol(X),nrow(X)==40)
+             y<-DGEList(counts=counts)
+             keep<-filterByExpr(y,design=X)
+             y<-calcNormFactors(y[keep,,keep.lib.sizes=FALSE],method='TMM')
+             y<-estimateDisp(y,X,robust=TRUE)
+             fit<-glmQLFit(y,X,robust=TRUE)
+             test<-glmQLFTest(fit,coef=match('diagnosisOUD',colnames(X)))
+             z<-topTags(test,n=Inf,sort.by='none')$table;z$gene_id<-rownames(z)
+             write.csv(z,paste0('extended_outputs/',region,'_full_extended_edgeR.csv'),row.names=FALSE)
+             selected<-merge(data.frame(gene_id=ids,gene=genes),z[,c('gene_id','logFC','PValue','FDR')],by='gene_id',all.x=TRUE,sort=FALSE)
+             selected$region<-region
+             all_res[[region]]<-selected
+             writeLines(capture.output(list(design=colnames(X),rank=qr(X)$rank,n=40,genes=nrow(z),fdr05=sum(z$FDR<.05))),paste0('extended_outputs/',region,'_model_diagnostics.txt'))
+             cat(region,'filtered_genes',nrow(z),'whole_transcriptome_fdr05',sum(z$FDR<0.05),'\n')
+             print(selected[,c('gene','logFC','PValue','FDR')])
+          }
+          write.csv(do.call(rbind,all_res),'extended_outputs/nine_genes_extended_covariate_sensitivity.csv',row.names=FALSE)
+          writeLines(capture.output(sessionInfo()),'extended_outputs/sessionInfo.txt')
+          R
+          Rscript extended.R | tee extended_run_log.txt
+          cp extended_run_log.txt extended_outputs/
+          sha256sum original_counts.csv.gz matched_metadata.csv extended.R > extended_outputs/input_sha256.txt
+      - name: Save complete analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-primary-extended-pH-race-storage-model
+          path: extended_outputs/
+          retention-days: 7
