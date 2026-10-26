@@ -1,0 +1,37 @@
+name: Snapshot OUD EGR1 public analysis code release
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-egr1-code-release.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  code-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make code-only reproducibility ZIP
+        run: |
+          set -euo pipefail
+          mkdir -p release_code
+          cp validation/run_discovery_edgeR.R validation/donor22_edgeR_QL.R validation/edgeR_EGR1_all_donors.R validation/GSE198121_independent_blood_EGR1.py validation/hla_raw_fastq_pilot.py validation/public_BA10_and_SRA_inventory.py validation/OUD_EGR1_CODE_RELEASE_README_2026-10-25.md release_code/
+          find release_code -type f -print0 | sort -z | xargs -0 sha256sum > release_code/SHA256SUMS.txt
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          with zipfile.ZipFile('OUD_EGR1_CODE_SNAPSHOT_2026-10-25.zip','w',compression=zipfile.ZIP_DEFLATED) as z:
+           for p in sorted(Path('release_code').iterdir()):z.write(p,p.name)
+          PY
+          sha256sum OUD_EGR1_CODE_SNAPSHOT_2026-10-25.zip
+      - name: Publish public code-only GitHub release (not DOI)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create oud-egr1-code-v1-20261025 OUD_EGR1_CODE_SNAPSHOT_2026-10-25.zip --title 'OUD–EGR1 reproducibility code v1 (author review)' --notes-file validation/OUD_EGR1_CODE_RELEASE_README_2026-10-25.md --target "${{ github.sha }}"
+      - name: Show public version link
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view oud-egr1-code-v1-20261025 --json url,tagName,isDraft
