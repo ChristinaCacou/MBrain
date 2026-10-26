@@ -1,0 +1,31 @@
+name: Public HLA DRB allele-panel read pilot
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-hla-raw-fastq-pilot.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official public SRA-to-FASTQ manifest
+        run: |
+          curl -fLsS --retry 3 --max-time 120 -o sra_run_manifest.tsv 'https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRP319708&result=read_run&fields=run_accession,experiment_accession,sample_accession,sample_title,fastq_ftp,fastq_bytes,library_layout&format=tsv'
+          test "$(wc -l < sra_run_manifest.tsv)" -eq 81
+      - name: Stream limited FASTQ prefixes across four mapped HLA donors
+        run: |
+          set -o pipefail
+          python3 validation/hla_raw_fastq_pilot.py 268435456 | tee hla_console.log
+          sha256sum sra_run_manifest.tsv validation/hla_raw_fastq_pilot.py > hla_read_pilot/INPUT_SHA256SUMS.txt
+          cp hla_console.log hla_read_pilot/
+      - name: Archive aggregate findings only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-public-HLA-allele-panel-FASTQ-partial-read-audit
+          path: hla_read_pilot/
+          retention-days: 7
