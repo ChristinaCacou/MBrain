@@ -1,0 +1,25 @@
+name: OUD public BA10 and original SRA raw-read access audit
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-public-access-audit.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check uncredentialed NeMO public files and original SRA read manifest
+        run: python3 validation/public_BA10_and_SRA_inventory.py | tee public_access_console.log
+      - name: Archive evidence not restricted data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oud-public-BA10-and-SRA-access-audit
+          path: |
+            public_data_access_audit/
+            public_access_console.log
+          retention-days: 7
