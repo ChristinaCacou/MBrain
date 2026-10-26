@@ -1,0 +1,42 @@
+name: Independent published Sosnowski brain EGR1 row audit
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-sosnowski-supplement-audit.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve full published third-cohort supplementary gene table
+        run: |
+          set -e
+          for u in \
+            'https://pmc.ncbi.nlm.nih.gov/articles/instance/9948892/bin/mmc5.txt' \
+            'https://ars.els-cdn.com/content/image/1-s2.0-S2772598722000108-mmc5.txt' \
+            'https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_xml/PMC9948892/unicode'; do
+             echo "Attempt $u"
+             if curl -fLsS --retry 2 --max-time 90 --output published_Table_S1.txt "$u"; then
+               if test "$(wc -c < published_Table_S1.txt)" -gt 1000000 && ! head -c 300 published_Table_S1.txt | grep -qi '<html'; then
+                 printf '%s' "$u" > successful_url.txt
+                 break
+               fi
+             fi
+          done
+          test -s successful_url.txt
+      - name: Audit published gene-level EGR1 row
+        run: |
+          python3 validation/read_sosnowski_supplement.py published_Table_S1.txt "$(cat successful_url.txt)" | tee run.log
+          sha256sum published_Table_S1.txt validation/read_sosnowski_supplement.py > sosnowski_output/SHA256SUMS.txt
+          cp run.log sosnowski_output/
+      - name: Preserve table audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sosnowski-independent-published-prefrontal-EGR1-evidence
+          path: sosnowski_output/
+          retention-days: 7
