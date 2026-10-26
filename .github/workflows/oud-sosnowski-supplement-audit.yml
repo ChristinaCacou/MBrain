@@ -27,6 +27,26 @@ jobs:
                fi
              fi
           done
+          if ! test -s successful_url.txt; then
+            python3 - <<'PY'
+          import urllib.request,xml.etree.ElementTree as ET,tarfile,io,pathlib
+          url='https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi?id=PMC9948892'
+          req=urllib.request.Request(url,headers={'User-Agent':'Research-Reproducibility/1.0'})
+          with urllib.request.urlopen(req,timeout=30) as f: xml=f.read()
+          root=ET.fromstring(xml)
+          links=[x.attrib.get('href','') for x in root.findall('.//link') if x.attrib.get('format') in ('tgz','tar.gz')]
+          print('OA package links',links)
+          if not links:raise RuntimeError('No PMC OA tarball available')
+          u=links[0].replace('ftp://','https://')
+          with urllib.request.urlopen(u,timeout=120) as f: dat=f.read()
+          t=tarfile.open(fileobj=io.BytesIO(dat),mode='r:gz')
+          matches=[m for m in t.getmembers() if m.name.endswith('mmc5.txt') or m.name.lower().endswith('table_s1.txt')]
+          print('supplement candidates',[(m.name,m.size) for m in matches])
+          if not matches:raise RuntimeError('OA package has no mmc5 file')
+          pathlib.Path('published_Table_S1.txt').write_bytes(t.extractfile(matches[0]).read())
+          pathlib.Path('successful_url.txt').write_text(u+':'+matches[0].name)
+          PY
+          fi
           test -s successful_url.txt
       - name: Audit published gene-level EGR1 row
         run: |
