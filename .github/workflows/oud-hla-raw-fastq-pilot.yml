@@ -19,7 +19,7 @@ jobs:
       - name: Stream limited FASTQ prefixes across four mapped HLA donors
         run: |
           set -o pipefail
-          python3 validation/hla_raw_fastq_pilot.py 268435456 | tee hla_console.log
+          python3 validation/hla_raw_fastq_pilot.py 134217728 | tee hla_console.log
           sha256sum sra_run_manifest.tsv validation/hla_raw_fastq_pilot.py > hla_read_pilot/INPUT_SHA256SUMS.txt
           cp hla_console.log hla_read_pilot/
       - name: Archive aggregate findings only
