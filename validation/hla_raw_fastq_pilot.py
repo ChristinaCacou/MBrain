@@ -8,7 +8,7 @@ from pathlib import Path
 out=Path("hla_read_pilot");out.mkdir(exist_ok=True)
 K=31
 PREFIX=int(sys.argv[1]) if len(sys.argv)>1 else 268435456
-wanted=['HN22','HBA22','HN35','HBA35']
+wanted=['HN22','HN35']
 manifest=list(csv.DictReader(open('sra_run_manifest.tsv'),delimiter='\t'))
 byname={r['sample_title']:r for r in manifest}
 assert all(x in byname for x in wanted)
@@ -57,10 +57,15 @@ results=[]
 for sam in wanted:
  r=byname[sam]; urls=r['fastq_ftp'].split(';')
  assert len(urls)==2
- counts=Counter(); nbytes=0; statuses=[]
+ counts=Counter(); nbytes=0; statuses=[]; errors=[]
  for mate,ftp in enumerate(urls,1):
   dest=out/f'temp_{sam}_R{mate}.fastq.gz.partial'
-  status,n=fetchprefix('https://'+ftp,dest);statuses.append(status);nbytes+=n
+  try:
+   status,n=fetchprefix('https://'+ftp,dest);statuses.append(status);nbytes+=n
+  except Exception as e:
+   errors.append({'mate':mate,'error':str(e)})
+   print('MATE_UNAVAILABLE',sam,mate,str(e),flush=True)
+   continue
   f=gzip.open(dest,'rt',errors='replace')
   try:
    while True:
@@ -80,7 +85,7 @@ for sam in wanted:
   finally:f.close()
   dest.unlink()
  summary={'sample':sam,'run':r['run_accession'],'mates':2,'http_statuses':statuses,
-  'prefix_bytes_per_mate':PREFIX,'bytes_downloaded':nbytes,'read_counts':dict(counts)}
+  'prefix_bytes_per_mate':PREFIX,'bytes_downloaded':nbytes,'read_counts':dict(counts),'fetch_errors':errors}
  results.append(summary)
  print(json.dumps(summary),flush=True)
 report={'classification':'exploratory incomplete FASTQ-prefix allele-panel exact-31mer read-support audit, NOT donor HLA typing, complete read mapping, or validated HLA quantification',
