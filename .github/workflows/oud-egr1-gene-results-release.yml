@@ -1,0 +1,115 @@
+name: Publish OUD EGR1 independent numerical outputs (no donor metadata)
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-egr1-gene-results-release.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve executed official genome-wide results
+        run: |
+          set -euo pipefail
+          mkdir -p source/modern source/BA9 out/edgeR_primary out/BA9 out/LOO
+          gh run download 40224840452 -R ChristinaCacou/MBrain --name oud-edgeR-modern-donor22-full-results --dir source/modern
+          gh run download 40149337749 -R ChristinaCacou/MBrain --name oud-independent-ba9-results --dir source/BA9
+          for batch in 1 2 3 5 6 7 8; do
+            mkdir -p "source/batch_$batch"
+            gh run download 40238756610 -R ChristinaCacou/MBrain --name "oud-LOO-batch-$batch" --dir "source/batch_$batch"
+          done
+          mkdir -p source/batch_4
+          gh run download 40239182766 -R ChristinaCacou/MBrain --name oud-LOO-batch-4-retry --dir source/batch_4
+      - name: Copy only approved gene-level outputs
+        run: |
+          set -euo pipefail
+          find source -maxdepth 4 -type f | head -75
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          base=Path("source/modern")
+          tables=sorted(base.rglob("*edgeR_QL.csv"))
+          assert len(tables)==8,[str(p) for p in tables]
+          for p in tables:
+              dst=Path("out/edgeR_primary")/("donor22" if "donor22" in str(p) else "full_cohort")
+              dst.mkdir(exist_ok=True,parents=True);shutil.copy2(p,dst/p.name)
+          ba=sorted(Path("source/BA9").rglob("GSE182321_edgeR_full.csv"))
+          assert len(ba)==1,[str(p) for p in ba]
+          shutil.copy2(ba[0],"out/BA9/GSE182321_edgeR_full.csv")
+          loofiles=[]
+          summaries=[]
+          for i in range(1,9):
+              d=Path(f"source/batch_{i}")
+              files=sorted(d.rglob("DLPFC_omit_*_full_gene_table.csv.gz"))
+              ss=sorted(d.rglob(f"LOO_EGR1_batch_{i}_summary.csv"))
+              assert len(files)==5,(i,files)
+              assert len(ss)==1,(i,ss)
+              loofiles+=files;summaries+=ss
+              for p in files:shutil.copy2(p,"out/LOO/"+p.name)
+          assert len({p.name for p in loofiles})==40
+          import csv
+          allr=[]
+          for p in summaries:
+              with open(p,newline='') as f:allr+=list(csv.DictReader(f))
+          assert len(allr)==40 and len({r["omitted_sample"] for r in allr})==40
+          assert sum(float(r["EGR1_FDR"])<.05 for r in allr)==37
+          assert all(float(r["EGR1_logFC"])<0 for r in allr)
+          with open("out/EGR1_LOO_40_donors_summary.csv","w",newline="") as f:
+              writer=csv.DictWriter(f,fieldnames=allr[0].keys());writer.writeheader();writer.writerows(sorted(allr,key=lambda r:int(r["donor_id"])))
+          print("Audited 8 primary/donor22 full tables, one external BA9 full table and all 40 leave-one-out tables.")
+          PY
+      - name: Generate numerical BH audit, description and reproducible manifest
+        run: |
+          python3 -m pip install --break-system-packages -q pandas numpy
+          python3 - <<'PY'
+          import pandas as pd,numpy as np
+          from pathlib import Path
+          z=list(Path('out/edgeR_primary').rglob('*edgeR_QL.csv')) + [Path('out/BA9/GSE182321_edgeR_full.csv')]
+          audits=[]
+          for f in z:
+              d=pd.read_csv(f)
+              n=len(d);p=d.PValue.to_numpy();q=d.FDR.to_numpy()
+              order=np.argsort(p)
+              qq=np.empty(n)
+              v=np.minimum.accumulate((p[order]*n/np.arange(1,n+1))[::-1])[::-1]
+              qq[order]=np.minimum(1,v)
+              gap=float(np.max(np.abs(q-qq)))
+              assert gap<1e-9, (str(f),gap)
+              audits.append((str(f),n,gap))
+          pd.DataFrame(audits,columns=['file','genes_tested','max_bh_difference']).to_csv('out/FULL_COHORT_BH_AUDIT.csv',index=False)
+          PY
+          cat > out/README.txt <<'TEXT'
+          Gene-level public secondary-analysis output snapshot (2026-10-27).
+          Inputs: public NCBI GEO GSE174409, GSE182321.
+          Contents: 8 primary/donor-22 modern-edgeR full gene tables,
+          40 DLPFC full-family leave-one-donor-out edgeR tables and summary,
+          and external BA9 full gene table, with independent BH audit.
+          These are published-model sensitivity results, NOT independent biological replication.
+          No sample-level metadata, raw sequencing reads or participant identifiers included.
+          The source studies retain their rights; this derivative analysis file conveys no
+          consent to redistribute restricted/private original donor metadata.
+          No ethics review, author approval, journal acceptance or permanent DOI is implied.
+          Code: https://github.com/ChristinaCacou/MBrain/releases/tag/oud-egr1-code-v1-20261025
+          TEXT
+          find out -type f -not -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > out/SHA256SUMS.txt
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          with zipfile.ZipFile('OUD_EGR1_GENE_LEVEL_RESULTS_v1.zip','w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
+              for f in sorted(Path('out').rglob('*')):
+                  if f.is_file():z.write(f,f.relative_to('out'))
+          PY
+          unzip -tq OUD_EGR1_GENE_LEVEL_RESULTS_v1.zip
+          sha256sum OUD_EGR1_GENE_LEVEL_RESULTS_v1.zip
+      - name: Publish versioned GitHub numerical release (not a DOI)
+        run: |
+          gh release create oud-egr1-gene-results-v1-20261027 OUD_EGR1_GENE_LEVEL_RESULTS_v1.zip --title 'OUD EGR1 gene-level analysis results v1 (author review)' --notes-file out/README.txt --target "${{ github.sha }}"
+      - name: Verify release details
+        run: gh release view oud-egr1-gene-results-v1-20261027 --json url,tagName,isDraft,assets
