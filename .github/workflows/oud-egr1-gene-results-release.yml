@@ -30,7 +30,6 @@ jobs:
       - name: Copy only approved gene-level outputs
         run: |
           set -euo pipefail
-          find source -maxdepth 4 -type f | head -75
           python3 - <<'PY'
           from pathlib import Path
           import shutil
