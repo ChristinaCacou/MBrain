@@ -1,0 +1,43 @@
+name: Audit independent 95-donor ventral midbrain EGR1 published results
+on:
+  push:
+    branches: [analysis/oud-edger-validation-20261024]
+    paths: [.github/workflows/oud-wei-egr1-independent-brain.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install workbook reader
+        run: python3 -m pip install -q openpyxl
+      - name: Download verified public journal supplementary tables
+        shell: bash
+        run: |
+          set -eu
+          for n in 4 5 6 7 8 11 15; do
+            f="Wei2023_MOESM${n}.xlsx"
+            for prefix in               "https://pmc.ncbi.nlm.nih.gov/articles/instance/10497570/bin"               "https://static-content.springer.com/esm/art%3A10.1038%2Fs41467-023-41455-8/MediaObjects"; do
+              if curl -fLsS --retry 1 --max-time 65 -o "$f" "$prefix/41467_2023_41455_MOESM${n}_ESM.xlsx"; then
+                if python3 -c "import zipfile,sys; assert zipfile.is_zipfile(sys.argv[1])" "$f"; then echo "Verified $f"; break; fi
+              fi
+              rm -f "$f"
+            done
+          done
+          ls -lh Wei2023_*.xlsx
+      - name: Extract gene-level original published independent EGR1 results
+        run: |
+          python3 validation/audit_wei2023_EGR1_public_tables.py | tee analysis_console.log
+          mkdir -p wei_2023_egr1_audit
+          cp analysis_console.log wei_2023_egr1_audit/
+          sha256sum validation/audit_wei2023_EGR1_public_tables.py Wei2023_*.xlsx > wei_2023_egr1_audit/SHA256SUMS.txt
+      - name: Preserve audited numerical evidence (not restricted data)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wei2023-independent-brain-published-EGR1-audit
+          path: wei_2023_egr1_audit/
+          retention-days: 7
