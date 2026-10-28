@@ -32,7 +32,18 @@ jobs:
         run: |
           python3 validation/audit_wei2023_EGR1_public_tables.py | tee analysis_console.log
           mkdir -p wei_2023_egr1_audit
-          cp analysis_console.log wei_2023_egr1_audit/
+          cp analysis_console.log Wei2023_MOESM6.xlsx wei_2023_egr1_audit/
+          python3 - <<'PY'
+          from openpyxl import load_workbook
+          import json
+          s=load_workbook('Wei2023_MOESM6.xlsx',read_only=True,data_only=True).active
+          rows=[]
+          for i,r in enumerate(s.iter_rows(values_only=True),1):
+            if i<=6 or i in (463,5551): rows.append({'excel_row':i,'values':[str(v) if v is not None else '' for v in r]})
+            if i>5551:break
+          with open('wei_2023_egr1_audit/column_header_and_EGR1_cells.json','w') as f:json.dump(rows,f,indent=2)
+          print(json.dumps(rows,indent=2))
+          PY
           sha256sum validation/audit_wei2023_EGR1_public_tables.py Wei2023_*.xlsx > wei_2023_egr1_audit/SHA256SUMS.txt
       - name: Preserve audited numerical evidence (not restricted data)
         if: always()
